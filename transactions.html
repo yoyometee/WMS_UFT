@@ -1,0 +1,723 @@
+<!-- Transactions History Content -->
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">ประวัติการเคลื่อนไหว</h1>
+            <p class="text-gray-600 mt-1">ติดตามและจัดการธุรกรรมทั้งหมดในระบบ</p>
+        </div>
+        <div class="flex space-x-4">
+            <button onclick="exportTransactions()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center">
+                <i class="fas fa-download mr-2"></i>ส่งออก Excel
+            </button>
+            <button onclick="refreshTransactions()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+                <i class="fas fa-sync-alt mr-2"></i>รีเฟรช
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Date Range -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">วันที่เริ่มต้น</label>
+                <input 
+                    type="date" 
+                    id="dateFromFilter" 
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">วันที่สิ้นสุด</label>
+                <input 
+                    type="date" 
+                    id="dateToFilter" 
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+            </div>
+
+            <!-- Transaction Type -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">ประเภทธุรกรรม</label>
+                <select id="transactionTypeFilter" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">ทั้งหมด</option>
+                    <option value="รับสินค้า">รับสินค้า</option>
+                    <option value="จัดเตรียมสินค้า">จัดเตรียมสินค้า</option>
+                    <option value="ย้ายสินค้า">ย้ายสินค้า</option>
+                    <option value="ปรับสต๊อก">ปรับสต๊อก</option>
+                    <option value="เบิกวัตถุดิบเพื่อผลิต">เบิกวัตถุดิบ</option>
+                </select>
+            </div>
+
+            <!-- SKU Search -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">ค้นหา SKU</label>
+                <input 
+                    type="text" 
+                    id="skuSearchFilter" 
+                    placeholder="กรอก SKU..." 
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+            </div>
+        </div>
+
+        <!-- Filter Actions -->
+        <div class="flex justify-between items-center mt-6">
+            <button onclick="applyTransactionFilters()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+                <i class="fas fa-search mr-2"></i>ค้นหา
+            </button>
+            <button onclick="clearTransactionFilters()" class="text-gray-600 hover:text-gray-800 transition-colors">
+                <i class="fas fa-times mr-1"></i>ล้างตัวกรอง
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">ธุรกรรมทั้งหมด</p>
+                    <p id="totalTransactions" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <i class="fas fa-exchange-alt text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">รับสินค้า</p>
+                    <p id="receiveTransactions" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <i class="fas fa-truck-loading text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">เบิกสินค้า</p>
+                    <p id="pickTransactions" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-orange-100 rounded-full p-3">
+                    <i class="fas fa-dolly text-orange-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">ปรับสต๊อก</p>
+                    <p id="adjustTransactions" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-purple-100 rounded-full p-3">
+                    <i class="fas fa-edit text-purple-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-900">รายการธุรกรรม</h2>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600">
+                        แสดง <span id="transactionCount">0</span> รายการ
+                    </span>
+                    <select id="transactionPageSize" class="px-3 py-1 border border-gray-300 rounded text-sm" onchange="changeTransactionPageSize()">
+                        <option value="20">20 รายการ</option>
+                        <option value="50">50 รายการ</option>
+                        <option value="100">100 รายการ</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tags ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">วันที่/เวลา</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ประเภท</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สินค้า</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">จำนวน</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">น้ำหนัก</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ตำแหน่ง</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ผู้บันทึก</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">การจัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionsTableBody" class="bg-white divide-y divide-gray-200">
+                    <!-- Loading state -->
+                    <tr>
+                        <td colspan="10" class="px-6 py-12 text-center text-gray-500">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-4"></i>
+                            <p>กำลังโหลดข้อมูลธุรกรรม...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div id="transactionsPagination" class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div class="text-sm text-gray-600">
+                แสดง <span id="transactionPaginationInfo">0-0 จาก 0</span> รายการ
+            </div>
+            <div class="flex space-x-2">
+                <button id="prevTransactionPage" onclick="changeTransactionPage(-1)" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50" disabled>
+                    ก่อนหน้า
+                </button>
+                <button id="nextTransactionPage" onclick="changeTransactionPage(1)" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50" disabled>
+                    ถัดไป
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transaction Detail Modal -->
+<div id="transactionDetailModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center">
+    <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-900">รายละเอียดธุรกรรม</h3>
+                <button onclick="closeTransactionDetailModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="transactionDetailContent" class="p-6">
+            <!-- Content will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<script id="transactions-script">
+let currentTransactionsPage = 1;
+let transactionsPerPage = 20;
+let totalTransactions = 0;
+let currentTransactionsData = [];
+let transactionFilters = {};
+
+function loadTransactions() {
+    document.getElementById('mainContent').innerHTML = `<?= include('transactions'); ?>`;
+    
+    // Initialize transactions page
+    initializeTransactionsPage();
+}
+
+function initializeTransactionsPage() {
+    // Setup event listeners
+    setupTransactionsEventListeners();
+    
+    // Set default date filters (last 7 days)
+    setDefaultDateFilters();
+    
+    // Load initial data
+    loadTransactionsData();
+}
+
+function setupTransactionsEventListeners() {
+    // Filter change events
+    const filterElements = [
+        'dateFromFilter', 'dateToFilter', 'transactionTypeFilter', 'skuSearchFilter'
+    ];
+    
+    filterElements.forEach(elementId => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            if (element.type === 'text') {
+                let timeout;
+                element.addEventListener('input', function() {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        if (this.value.length >= 3 || this.value.length === 0) {
+                            applyTransactionFilters();
+                        }
+                    }, 500);
+                });
+            } else {
+                element.addEventListener('change', applyTransactionFilters);
+            }
+        }
+    });
+}
+
+function setDefaultDateFilters() {
+    const today = new Date();
+    const sevenDaysAgo = new Date(today.getTime() - (7 * 24 * 60 * 60 * 1000));
+    
+    const dateFromFilter = document.getElementById('dateFromFilter');
+    const dateToFilter = document.getElementById('dateToFilter');
+    
+    if (dateFromFilter) {
+        dateFromFilter.value = sevenDaysAgo.toISOString().split('T')[0];
+    }
+    
+    if (dateToFilter) {
+        dateToFilter.value = today.toISOString().split('T')[0];
+    }
+}
+
+function loadTransactionsData() {
+    showLoading();
+    
+    // Build filters object
+    const filters = {
+        date_from: document.getElementById('dateFromFilter')?.value || null,
+        date_to: document.getElementById('dateToFilter')?.value || null,
+        main_type: document.getElementById('transactionTypeFilter')?.value || null,
+        sku: document.getElementById('skuSearchFilter')?.value || null,
+        limit: transactionsPerPage * 5 // Load more data for client-side pagination
+    };
+    
+    transactionFilters = filters;
+    
+    googleScriptCall('getTransactions', filters)
+        .then(response => {
+            if (response.success) {
+                currentTransactionsData = response.data || [];
+                totalTransactions = currentTransactionsData.length;
+                
+                displayTransactionsData();
+                updateTransactionsPagination();
+                updateTransactionStats();
+            } else {
+                console.error('Failed to load transactions:', response.message);
+                displayTransactionsError();
+                showMessage('เกิดข้อผิดพลาดในการโหลดข้อมูลธุรกรรม: ' + response.message, 'error');
+            }
+            hideLoading();
+        })
+        .catch(error => {
+            console.error('Transactions loading error:', error);
+            displayTransactionsError();
+            showMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+            hideLoading();
+        });
+}
+
+function displayTransactionsData() {
+    const tbody = document.getElementById('transactionsTableBody');
+    const transactionCount = document.getElementById('transactionCount');
+    
+    if (!tbody) return;
+    
+    if (!currentTransactionsData || currentTransactionsData.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="px-6 py-12 text-center text-gray-500">
+                    <i class="fas fa-inbox text-4xl mb-4"></i>
+                    <p class="text-lg">ไม่พบข้อมูลธุรกรรม</p>
+                    <p class="text-sm">ลองปรับเปลี่ยนตัวกรองหรือช่วงวันที่</p>
+                </td>
+            </tr>
+        `;
+        if (transactionCount) transactionCount.textContent = '0';
+        return;
+    }
+    
+    // Pagination
+    const startIndex = (currentTransactionsPage - 1) * transactionsPerPage;
+    const endIndex = startIndex + transactionsPerPage;
+    const paginatedTransactions = currentTransactionsData.slice(startIndex, endIndex);
+    
+    const rows = paginatedTransactions.map(transaction => {
+        const createdAt = new Date(transaction.created_at);
+        const dateStr = createdAt.toLocaleDateString('th-TH', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+        });
+        const timeStr = createdAt.toLocaleTimeString('th-TH', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        // Determine transaction type color and icon
+        const mainType = transaction.transaction_types?.main_type || '';
+        let typeColor = 'bg-gray-100 text-gray-600';
+        let typeIcon = 'fas fa-exchange-alt';
+        
+        if (mainType.includes('รับ')) {
+            typeColor = 'bg-green-100 text-green-600';
+            typeIcon = 'fas fa-truck-loading';
+        } else if (mainType.includes('จัดเตรียม')) {
+            typeColor = 'bg-blue-100 text-blue-600';
+            typeIcon = 'fas fa-dolly';
+        } else if (mainType.includes('ย้าย')) {
+            typeColor = 'bg-orange-100 text-orange-600';
+            typeIcon = 'fas fa-exchange-alt';
+        } else if (mainType.includes('ปรับ')) {
+            typeColor = 'bg-purple-100 text-purple-600';
+            typeIcon = 'fas fa-edit';
+        } else if (mainType.includes('เบิก')) {
+            typeColor = 'bg-yellow-100 text-yellow-600';
+            typeIcon = 'fas fa-minus-circle';
+        }
+        
+        return `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-mono text-gray-900">${transaction.tags_id}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${dateStr}</div>
+                    <div class="text-sm text-gray-500">${timeStr}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 ${typeColor} rounded-full flex items-center justify-center mr-3">
+                            <i class="${typeIcon} text-xs"></i>
+                        </div>
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">${mainType}</div>
+                            <div class="text-xs text-gray-500">${transaction.transaction_types?.sub_type || ''}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${transaction.products?.sku || 'N/A'}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="text-sm text-gray-900">${transaction.products?.product_name || 'N/A'}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${(transaction.pieces || 0).toLocaleString()} ชิ้น</div>
+                    <div class="text-xs text-gray-500">${(transaction.packs || 0).toLocaleString()} แพ็ค</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${(transaction.weight || 0).toLocaleString()} กก.</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${transaction.warehouse_locations?.location_id || 'N/A'}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${transaction.users?.full_name || transaction.created_by_name || 'N/A'}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button 
+                        onclick="viewTransactionDetail('${transaction.tags_id}')" 
+                        class="text-blue-600 hover:text-blue-900 transition-colors"
+                        title="ดูรายละเอียด"
+                    >
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button 
+                        onclick="printTransaction('${transaction.tags_id}')" 
+                        class="text-green-600 hover:text-green-900 transition-colors"
+                        title="พิมพ์"
+                    >
+                        <i class="fas fa-print"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    tbody.innerHTML = rows;
+    if (transactionCount) transactionCount.textContent = currentTransactionsData.length.toLocaleString();
+}
+
+function displayTransactionsError() {
+    const tbody = document.getElementById('transactionsTableBody');
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="px-6 py-12 text-center text-red-500">
+                    <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                    <p class="text-lg">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+                    <button onclick="loadTransactionsData()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        ลองใหม่
+                    </button>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function updateTransactionsPagination() {
+    const totalPages = Math.ceil(totalTransactions / transactionsPerPage);
+    const startItem = (currentTransactionsPage - 1) * transactionsPerPage + 1;
+    const endItem = Math.min(currentTransactionsPage * transactionsPerPage, totalTransactions);
+    
+    const paginationInfo = document.getElementById('transactionPaginationInfo');
+    const prevButton = document.getElementById('prevTransactionPage');
+    const nextButton = document.getElementById('nextTransactionPage');
+    
+    if (paginationInfo) {
+        paginationInfo.textContent = `${startItem}-${endItem} จาก ${totalTransactions}`;
+    }
+    
+    if (prevButton) {
+        prevButton.disabled = currentTransactionsPage <= 1;
+    }
+    
+    if (nextButton) {
+        nextButton.disabled = currentTransactionsPage >= totalPages;
+    }
+}
+
+function updateTransactionStats() {
+    if (!currentTransactionsData || currentTransactionsData.length === 0) return;
+    
+    const stats = {
+        total: currentTransactionsData.length,
+        receive: 0,
+        pick: 0,
+        adjust: 0
+    };
+    
+    currentTransactionsData.forEach(transaction => {
+        const mainType = transaction.transaction_types?.main_type || '';
+        
+        if (mainType.includes('รับ')) {
+            stats.receive++;
+        } else if (mainType.includes('จัดเตรียม') || mainType.includes('เบิก')) {
+            stats.pick++;
+        } else if (mainType.includes('ปรับ')) {
+            stats.adjust++;
+        }
+    });
+    
+    const totalEl = document.getElementById('totalTransactions');
+    const receiveEl = document.getElementById('receiveTransactions');
+    const pickEl = document.getElementById('pickTransactions');
+    const adjustEl = document.getElementById('adjustTransactions');
+    
+    if (totalEl) totalEl.textContent = stats.total.toLocaleString();
+    if (receiveEl) receiveEl.textContent = stats.receive.toLocaleString();
+    if (pickEl) pickEl.textContent = stats.pick.toLocaleString();
+    if (adjustEl) adjustEl.textContent = stats.adjust.toLocaleString();
+}
+
+function changeTransactionPage(direction) {
+    const totalPages = Math.ceil(totalTransactions / transactionsPerPage);
+    const newPage = currentTransactionsPage + direction;
+    
+    if (newPage >= 1 && newPage <= totalPages) {
+        currentTransactionsPage = newPage;
+        displayTransactionsData();
+        updateTransactionsPagination();
+    }
+}
+
+function changeTransactionPageSize() {
+    const pageSizeSelect = document.getElementById('transactionPageSize');
+    if (pageSizeSelect) {
+        transactionsPerPage = parseInt(pageSizeSelect.value);
+        currentTransactionsPage = 1;
+        displayTransactionsData();
+        updateTransactionsPagination();
+    }
+}
+
+function applyTransactionFilters() {
+    currentTransactionsPage = 1;
+    loadTransactionsData();
+}
+
+function clearTransactionFilters() {
+    document.getElementById('dateFromFilter').value = '';
+    document.getElementById('dateToFilter').value = '';
+    document.getElementById('transactionTypeFilter').value = '';
+    document.getElementById('skuSearchFilter').value = '';
+    
+    setDefaultDateFilters();
+    applyTransactionFilters();
+}
+
+function refreshTransactions() {
+    currentTransactionsPage = 1;
+    loadTransactionsData();
+    showMessage('รีเฟรชข้อมูลธุรกรรมเรียบร้อยแล้ว', 'success');
+}
+
+function viewTransactionDetail(tagsId) {
+    const transaction = currentTransactionsData.find(t => t.tags_id === tagsId);
+    
+    if (!transaction) {
+        showMessage('ไม่พบข้อมูลธุรกรรมที่ต้องการดู', 'error');
+        return;
+    }
+    
+    // Create detail content
+    const createdAt = new Date(transaction.created_at);
+    const dateTimeStr = createdAt.toLocaleString('th-TH');
+    
+    const detailContent = `
+        <div class="space-y-6">
+            <!-- Basic Info -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลพื้นฐาน</h4>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Tags ID:</span>
+                            <span class="font-medium">${transaction.tags_id}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">วันที่/เวลา:</span>
+                            <span class="font-medium">${dateTimeStr}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">ประเภทหลัก:</span>
+                            <span class="font-medium">${transaction.transaction_types?.main_type || 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">ประเภทย่อย:</span>
+                            <span class="font-medium">${transaction.transaction_types?.sub_type || 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">สถานะ:</span>
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                ${transaction.status || 'ปกติ'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลสินค้า</h4>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">SKU:</span>
+                            <span class="font-medium">${transaction.products?.sku || 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">ชื่อสินค้า:</span>
+                            <span class="font-medium">${transaction.products?.product_name || 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">จำนวน (ชิ้น):</span>
+                            <span class="font-medium">${(transaction.pieces || 0).toLocaleString()}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">จำนวน (แพ็ค):</span>
+                            <span class="font-medium">${(transaction.packs || 0).toLocaleString()}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">น้ำหนัก (กก.):</span>
+                            <span class="font-medium">${(transaction.weight || 0).toLocaleString()}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Location & Logistics -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลตำแหน่งและขนส่ง</h4>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">ตำแหน่งเก็บ:</span>
+                            <span class="font-medium">${transaction.warehouse_locations?.location_id || 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Pallet ID:</span>
+                            <span class="font-medium">${transaction.pallet_id || 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">สีพาเลท:</span>
+                            <span class="font-medium">${transaction.pallet_color || 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">คันที่:</span>
+                            <span class="font-medium">${transaction.truck_number || 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">จุดที่:</span>
+                            <span class="font-medium">${transaction.point_number || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลเพิ่มเติม</h4>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">รหัสลูกค้า:</span>
+                            <span class="font-medium">${transaction.customer_code || 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">ชื่อร้านค้า:</span>
+                            <span class="font-medium">${transaction.customer_name || 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">เลขงานจัดส่ง:</span>
+                            <span class="font-medium">${transaction.delivery_job_number || 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">ผู้บันทึก:</span>
+                            <span class="font-medium">${transaction.users?.full_name || transaction.created_by_name || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dates -->
+            ${(transaction.received_date || transaction.expiration_date) ? `
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">ข้อมูลวันที่</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        ${transaction.received_date ? `
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">วันที่รับ:</span>
+                                <span class="font-medium">${new Date(transaction.received_date).toLocaleDateString('th-TH')}</span>
+                            </div>
+                        ` : ''}
+                        ${transaction.expiration_date ? `
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">วันหมดอายุ:</span>
+                                <span class="font-medium">${new Date(transaction.expiration_date).toLocaleDateString('th-TH')}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            ` : ''}
+            
+            <!-- Remark -->
+            ${transaction.remark ? `
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">หมายเหตุ</h4>
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <p class="text-gray-700">${transaction.remark}</p>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
+    document.getElementById('transactionDetailContent').innerHTML = detailContent;
+    document.getElementById('transactionDetailModal').classList.remove('hidden');
+}
+
+function closeTransactionDetailModal() {
+    document.getElementById('transactionDetailModal').classList.add('hidden');
+}
+
+function printTransaction(tagsId) {
+    showMessage(`พิมพ์ธุรกรรม ${tagsId} - ฟังก์ชันกำลังพัฒนา`, 'info');
+}
+
+function exportTransactions() {
+    showMessage('กำลังเตรียมไฟล์ส่งออก...', 'success');
+    
+    setTimeout(() => {
+        showMessage('ฟังก์ชันส่งออกยังไม่ได้ implement', 'error');
+    }, 1000);
+}
+</script>
