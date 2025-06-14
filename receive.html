@@ -1,0 +1,795 @@
+<!-- Receive Items Content -->
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">รับสินค้า</h1>
+            <p class="text-gray-600 mt-1">บันทึกการรับสินค้าเข้าคลัง</p>
+        </div>
+        <div class="flex space-x-4">
+            <button onclick="resetReceiveForm()" class="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition-colors flex items-center">
+                <i class="fas fa-undo mr-2"></i>รีเซ็ต
+            </button>
+            <button onclick="viewReceiveHistory()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+                <i class="fas fa-history mr-2"></i>ประวัติ
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">รับวันนี้</p>
+                    <p id="todayReceiveCount" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <i class="fas fa-truck-loading text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">พาเลทรอรับ</p>
+                    <p id="pendingPallets" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <i class="fas fa-pallet text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">น้ำหนักรวม (กก.)</p>
+                    <p id="todayTotalWeight" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-orange-100 rounded-full p-3">
+                    <i class="fas fa-weight text-orange-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Receive Form -->
+    <div class="bg-white rounded-xl shadow-lg">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-900">บันทึกการรับสินค้า</h2>
+            <p class="text-gray-600 text-sm mt-1">กรอกข้อมูลการรับสินค้าเข้าคลัง</p>
+        </div>
+
+        <form id="receiveForm" class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Left Column: Product Information -->
+                <div class="space-y-6">
+                    <h3 class="text-lg font-semibold text-gray-900 border-b pb-2">ข้อมูลสินค้า</h3>
+                    
+                    <!-- Product Search -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ค้นหาสินค้า *</label>
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                id="productSearch" 
+                                placeholder="พิมพ์ SKU หรือชื่อสินค้า..." 
+                                class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                autocomplete="off"
+                            >
+                            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                        <!-- Search Results Dropdown -->
+                        <div id="productSearchResults" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto">
+                            <!-- Search results will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Selected Product Display -->
+                    <div id="selectedProductInfo" class="hidden bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-semibold text-green-900" id="selectedProductName">-</h4>
+                                <p class="text-sm text-green-700" id="selectedProductSKU">-</p>
+                                <p class="text-sm text-green-600" id="selectedProductDetails">-</p>
+                            </div>
+                            <button type="button" onclick="clearSelectedProduct()" class="text-green-600 hover:text-green-800">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quantity Information -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">จำนวน (ชิ้น) *</label>
+                            <input 
+                                type="number" 
+                                id="receivePieces" 
+                                min="0" 
+                                step="1"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                placeholder="0"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">จำนวน (แพ็ค)</label>
+                            <input 
+                                type="number" 
+                                id="receivePacks" 
+                                min="0" 
+                                step="1"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                placeholder="0"
+                            >
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">น้ำหนักรวม (กก.) *</label>
+                        <input 
+                            type="number" 
+                            id="receiveWeight" 
+                            min="0" 
+                            step="0.001"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            placeholder="0.000"
+                        >
+                    </div>
+
+                    <!-- Lot & Dates -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">วันที่รับ *</label>
+                            <input 
+                                type="datetime-local" 
+                                id="receiveDate"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">วันหมดอายุ</label>
+                            <input 
+                                type="date" 
+                                id="expirationDate"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            >
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Lot/เลขเอกสาร</label>
+                        <input 
+                            type="text" 
+                            id="lotDocument"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            placeholder="หมายเลข Lot หรือเลขเอกสาร"
+                        >
+                    </div>
+                </div>
+
+                <!-- Right Column: Location & Logistics -->
+                <div class="space-y-6">
+                    <h3 class="text-lg font-semibold text-gray-900 border-b pb-2">ข้อมูลการขนส่งและจัดเก็บ</h3>
+                    
+                    <!-- Pallet Information -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Pallet ID</label>
+                            <input 
+                                type="text" 
+                                id="palletId"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                placeholder="ATG2500xxxxxx"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">สีพาเลท</label>
+                            <select 
+                                id="palletColor"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            >
+                                <option value="">เลือกสีพาเลท</option>
+                                <option value="เขียว">เขียว</option>
+                                <option value="แดง">แดง</option>
+                                <option value="น้ำเงิน">น้ำเงิน</option>
+                                <option value="เหลือง">เหลือง</option>
+                                <option value="ส้ม">ส้ม</option>
+                                <option value="ม่วง">ม่วง</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Truck Information -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">คันที่</label>
+                            <input 
+                                type="text" 
+                                id="truckNumber"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                placeholder="หมายเลขคัน"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">จุดที่</label>
+                            <input 
+                                type="text" 
+                                id="pointNumber"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                placeholder="หมายเลขจุด"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Location Assignment -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ตำแหน่งจัดเก็บ</label>
+                        <select 
+                            id="locationSelect"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        >
+                            <option value="">เลือกตำแหน่งจัดเก็บ</option>
+                            <option value="RCV">RCV - Receiving Zone</option>
+                            <!-- Available locations will be loaded here -->
+                        </select>
+                        <p class="text-sm text-gray-500 mt-1">หากไม่เลือก จะจัดเก็บที่ Receiving Zone ชั่วคราว</p>
+                    </div>
+
+                    <!-- Supplier Information -->
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">รหัสซัพพลายเออร์</label>
+                            <input 
+                                type="text" 
+                                id="supplierCode"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                placeholder="รหัสซัพพลายเออร์"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อซัพพลายเออร์</label>
+                            <input 
+                                type="text" 
+                                id="supplierName"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                placeholder="ชื่อบริษัทซัพพลายเออร์"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Receive Type -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ประเภทการรับ *</label>
+                        <select 
+                            id="receiveType"
+                            required
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        >
+                            <option value="">เลือกประเภทการรับ</option>
+                            <option value="รับสินค้าในประเทศ">รับสินค้าในประเทศ</option>
+                            <option value="รับสินค้า - สินค้ามีปัญหา">รับสินค้า - สินค้ามีปัญหา</option>
+                            <option value="ปรับเข้า (ยอดยกมา)">ปรับเข้า (ยอดยกมา)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Remarks -->
+            <div class="mt-8">
+                <label class="block text-sm font-medium text-gray-700 mb-2">หมายเหตุ</label>
+                <textarea 
+                    id="receiveRemark" 
+                    rows="3"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="ข้อมูลเพิ่มเติม เช่น สภาพสินค้า การขนส่ง เป็นต้น"
+                ></textarea>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="mt-8 flex justify-end space-x-4">
+                <button 
+                    type="button" 
+                    onclick="resetReceiveForm()" 
+                    class="px-8 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                    ล้างฟอร์ม
+                </button>
+                <button 
+                    type="submit" 
+                    class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                >
+                    <span id="receiveSubmitText">บันทึกการรับสินค้า</span>
+                    <i id="receiveSubmitSpinner" class="fas fa-spinner fa-spin ml-2 hidden"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Recent Receives -->
+    <div class="bg-white rounded-xl shadow-lg">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-900">การรับล่าสุด</h2>
+                <button onclick="loadRecentReceives()" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    <i class="fas fa-sync-alt mr-1"></i>รีเฟรช
+                </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">เวลา</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สินค้า</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">จำนวน</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">น้ำหนัก</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pallet ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                    </tr>
+                </thead>
+                <tbody id="recentReceivesTableBody" class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                            <i class="fas fa-spinner fa-spin text-xl mb-2"></i>
+                            <p>กำลังโหลดข้อมูล...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script id="receive-script">
+let selectedProduct = null;
+let searchTimeout = null;
+
+function loadReceive() {
+    document.getElementById('mainContent').innerHTML = `<?= include('receive'); ?>`;
+    
+    // Initialize receive page
+    initializeReceivePage();
+}
+
+function initializeReceivePage() {
+    // Setup event listeners
+    setupReceiveEventListeners();
+    
+    // Set default receive date to now
+    setDefaultReceiveDate();
+    
+    // Load initial data
+    loadReceiveStats();
+    loadRecentReceives();
+    loadAvailableLocations();
+}
+
+function setupReceiveEventListeners() {
+    // Product search
+    const productSearch = document.getElementById('productSearch');
+    if (productSearch) {
+        productSearch.addEventListener('input', handleProductSearch);
+        productSearch.addEventListener('blur', function() {
+            // Hide search results after a delay to allow clicking
+            setTimeout(() => {
+                hideProductSearchResults();
+            }, 200);
+        });
+        productSearch.addEventListener('focus', function() {
+            if (this.value.length >= 2) {
+                handleProductSearch({ target: this });
+            }
+        });
+    }
+
+    // Auto-calculate weight based on pieces
+    const piecesInput = document.getElementById('receivePieces');
+    const packsInput = document.getElementById('receivePacks');
+    
+    if (piecesInput) {
+        piecesInput.addEventListener('input', autoCalculateWeight);
+    }
+    
+    if (packsInput) {
+        packsInput.addEventListener('input', autoCalculateFromPacks);
+    }
+
+    // Form submission
+    const receiveForm = document.getElementById('receiveForm');
+    if (receiveForm) {
+        receiveForm.addEventListener('submit', handleReceiveSubmit);
+    }
+
+    // Click outside to hide search results
+    document.addEventListener('click', function(event) {
+        const searchContainer = document.getElementById('productSearch').parentElement;
+        if (!searchContainer.contains(event.target)) {
+            hideProductSearchResults();
+        }
+    });
+}
+
+function setDefaultReceiveDate() {
+    const receiveDate = document.getElementById('receiveDate');
+    if (receiveDate) {
+        const now = new Date();
+        const localDateTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+        receiveDate.value = localDateTime;
+    }
+}
+
+function handleProductSearch(event) {
+    const searchTerm = event.target.value.trim();
+    
+    if (searchTerm.length < 2) {
+        hideProductSearchResults();
+        return;
+    }
+
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        searchProducts(searchTerm);
+    }, 300);
+}
+
+function searchProducts(searchTerm) {
+    googleScriptCall('searchProducts', searchTerm)
+        .then(response => {
+            if (response.success) {
+                displayProductSearchResults(response.data || []);
+            } else {
+                console.error('Product search failed:', response.message);
+                hideProductSearchResults();
+            }
+        })
+        .catch(error => {
+            console.error('Product search error:', error);
+            hideProductSearchResults();
+        });
+}
+
+function displayProductSearchResults(products) {
+    const resultsContainer = document.getElementById('productSearchResults');
+    
+    if (!products || products.length === 0) {
+        hideProductSearchResults();
+        return;
+    }
+
+    const resultsHTML = products.map(product => `
+        <div class="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0" 
+             onclick="selectProduct('${product.sku}', '${product.product_name}', '${product.unit}', ${product.weight_per_bag || 0}, ${product.bags_per_pack || 1})">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="font-medium text-gray-900">${product.sku}</p>
+                    <p class="text-sm text-gray-600">${product.product_name}</p>
+                    <p class="text-xs text-gray-500">
+                        ${product.unit} | ${product.weight_per_bag || 0} กก./ถุง
+                        ${product.bags_per_pack ? ` | ${product.bags_per_pack} ถุง/แพ็ค` : ''}
+                    </p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm font-medium text-gray-900">${product.barcode || 'ไม่มีบาร์โค้ด'}</p>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    resultsContainer.innerHTML = resultsHTML;
+    resultsContainer.classList.remove('hidden');
+}
+
+function hideProductSearchResults() {
+    const resultsContainer = document.getElementById('productSearchResults');
+    if (resultsContainer) {
+        resultsContainer.classList.add('hidden');
+    }
+}
+
+function selectProduct(sku, productName, unit, weightPerBag, bagsPerPack) {
+    selectedProduct = {
+        sku,
+        productName,
+        unit,
+        weightPerBag: parseFloat(weightPerBag) || 0,
+        bagsPerPack: parseInt(bagsPerPack) || 1
+    };
+
+    // Update UI
+    document.getElementById('productSearch').value = sku;
+    document.getElementById('selectedProductSKU').textContent = sku;
+    document.getElementById('selectedProductName').textContent = productName;
+    document.getElementById('selectedProductDetails').textContent = 
+        `หน่วย: ${unit} | น้ำหนัก: ${weightPerBag} กก./ถุง | ${bagsPerPack} ถุง/แพ็ค`;
+    
+    document.getElementById('selectedProductInfo').classList.remove('hidden');
+    hideProductSearchResults();
+}
+
+function clearSelectedProduct() {
+    selectedProduct = null;
+    document.getElementById('productSearch').value = '';
+    document.getElementById('selectedProductInfo').classList.add('hidden');
+    
+    // Clear calculated fields
+    document.getElementById('receivePieces').value = '';
+    document.getElementById('receivePacks').value = '';
+    document.getElementById('receiveWeight').value = '';
+}
+
+function autoCalculateWeight() {
+    if (!selectedProduct) return;
+    
+    const pieces = parseFloat(document.getElementById('receivePieces').value) || 0;
+    const weightPerPiece = selectedProduct.weightPerBag || 0;
+    
+    if (pieces > 0 && weightPerPiece > 0) {
+        const totalWeight = pieces * weightPerPiece;
+        document.getElementById('receiveWeight').value = totalWeight.toFixed(3);
+        
+        // Also calculate packs if bags per pack is known
+        if (selectedProduct.bagsPerPack > 0) {
+            const packs = Math.floor(pieces / selectedProduct.bagsPerPack);
+            document.getElementById('receivePacks').value = packs;
+        }
+    }
+}
+
+function autoCalculateFromPacks() {
+    if (!selectedProduct) return;
+    
+    const packs = parseFloat(document.getElementById('receivePacks').value) || 0;
+    const bagsPerPack = selectedProduct.bagsPerPack || 1;
+    
+    if (packs > 0) {
+        const pieces = packs * bagsPerPack;
+        document.getElementById('receivePieces').value = pieces;
+        
+        // Trigger weight calculation
+        autoCalculateWeight();
+    }
+}
+
+function handleReceiveSubmit(event) {
+    event.preventDefault();
+    
+    if (!selectedProduct) {
+        showMessage('กรุณาเลือกสินค้าก่อน', 'error');
+        return;
+    }
+
+    // Validate required fields
+    const pieces = parseFloat(document.getElementById('receivePieces').value) || 0;
+    const weight = parseFloat(document.getElementById('receiveWeight').value) || 0;
+    const receiveDate = document.getElementById('receiveDate').value;
+    const receiveType = document.getElementById('receiveType').value;
+
+    if (pieces <= 0) {
+        showMessage('กรุณากรอกจำนวนชิ้นที่ถูกต้อง', 'error');
+        return;
+    }
+
+    if (weight <= 0) {
+        showMessage('กรุณากรอกน้ำหนักที่ถูกต้อง', 'error');
+        return;
+    }
+
+    if (!receiveDate) {
+        showMessage('กรุณาเลือกวันที่รับ', 'error');
+        return;
+    }
+
+    if (!receiveType) {
+        showMessage('กรุณาเลือกประเภทการรับ', 'error');
+        return;
+    }
+
+    // Show loading state
+    setReceiveSubmitLoading(true);
+
+    // Prepare transaction data
+    const transactionData = {
+        sku: selectedProduct.sku,
+        main_type: 'รับสินค้า',
+        sub_type: receiveType,
+        pieces: pieces,
+        packs: parseFloat(document.getElementById('receivePacks').value) || 0,
+        weight: weight,
+        pallet_id: document.getElementById('palletId').value || null,
+        pallet_color: document.getElementById('palletColor').value || null,
+        truck_number: document.getElementById('truckNumber').value || null,
+        point_number: document.getElementById('pointNumber').value || null,
+        location_id: document.getElementById('locationSelect').value || 'RCV',
+        lot_document: document.getElementById('lotDocument').value || null,
+        customer_code: document.getElementById('supplierCode').value || null,
+        customer_name: document.getElementById('supplierName').value || null,
+        received_date: receiveDate,
+        expiration_date: document.getElementById('expirationDate').value || null,
+        remark: document.getElementById('receiveRemark').value || null,
+        status: 'ปกติ'
+    };
+
+    // Submit transaction
+    googleScriptCall('createTransaction', transactionData)
+        .then(response => {
+            if (response.success) {
+                showMessage('บันทึกการรับสินค้าเรียบร้อยแล้ว Tags ID: ' + response.tags_id, 'success');
+                resetReceiveForm();
+                loadReceiveStats();
+                loadRecentReceives();
+            } else {
+                showMessage('เกิดข้อผิดพลาด: ' + response.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Receive submission error:', error);
+            showMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+        })
+        .finally(() => {
+            setReceiveSubmitLoading(false);
+        });
+}
+
+function setReceiveSubmitLoading(isLoading) {
+    const button = document.querySelector('#receiveForm button[type="submit"]');
+    const text = document.getElementById('receiveSubmitText');
+    const spinner = document.getElementById('receiveSubmitSpinner');
+    
+    if (button) button.disabled = isLoading;
+    if (text) text.textContent = isLoading ? 'กำลังบันทึก...' : 'บันทึกการรับสินค้า';
+    if (spinner) {
+        if (isLoading) {
+            spinner.classList.remove('hidden');
+        } else {
+            spinner.classList.add('hidden');
+        }
+    }
+}
+
+function resetReceiveForm() {
+    // Clear form
+    document.getElementById('receiveForm').reset();
+    
+    // Clear selected product
+    clearSelectedProduct();
+    
+    // Reset default date
+    setDefaultReceiveDate();
+    
+    showMessage('รีเซ็ตฟอร์มเรียบร้อย', 'success');
+}
+
+function loadReceiveStats() {
+    // For now, show static data. In production, load from server
+    document.getElementById('todayReceiveCount').textContent = '12';
+    document.getElementById('pendingPallets').textContent = '3';
+    document.getElementById('todayTotalWeight').textContent = '2,450';
+}
+
+function loadRecentReceives() {
+    googleScriptCall('getTransactions', { 
+        main_type: 'รับสินค้า', 
+        limit: 10 
+    })
+        .then(response => {
+            if (response.success) {
+                displayRecentReceives(response.data || []);
+            } else {
+                console.error('Failed to load recent receives:', response.message);
+                displayReceivesError();
+            }
+        })
+        .catch(error => {
+            console.error('Recent receives loading error:', error);
+            displayReceivesError();
+        });
+}
+
+function displayRecentReceives(receives) {
+    const tbody = document.getElementById('recentReceivesTableBody');
+    
+    if (!receives || receives.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                    <i class="fas fa-inbox text-xl mb-2"></i>
+                    <p>ไม่มีการรับล่าสุด</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const rows = receives.map(receive => {
+        const createdAt = new Date(receive.created_at);
+        const timeStr = createdAt.toLocaleTimeString('th-TH', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+
+        return `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${timeStr}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    ${receive.products?.sku || 'N/A'}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-900">
+                    ${receive.products?.product_name || 'N/A'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${(receive.pieces || 0).toLocaleString()} ชิ้น
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${(receive.weight || 0).toLocaleString()} กก.
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${receive.pallet_id || 'N/A'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                        ${receive.status || 'ปกติ'}
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    tbody.innerHTML = rows;
+}
+
+function displayReceivesError() {
+    const tbody = document.getElementById('recentReceivesTableBody');
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="7" class="px-6 py-8 text-center text-red-500">
+                <i class="fas fa-exclamation-triangle text-xl mb-2"></i>
+                <p>เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+                <button onclick="loadRecentReceives()" class="mt-2 px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+                    ลองใหม่
+                </button>
+            </td>
+        </tr>
+    `;
+}
+
+function loadAvailableLocations() {
+    googleScriptCall('getAvailableLocations')
+        .then(response => {
+            if (response.success) {
+                populateLocationOptions(response.data || []);
+            } else {
+                console.error('Failed to load locations:', response.message);
+            }
+        })
+        .catch(error => {
+            console.error('Locations loading error:', error);
+        });
+}
+
+function populateLocationOptions(locations) {
+    const locationSelect = document.getElementById('locationSelect');
+    
+    // Clear existing options except default
+    const defaultOptions = locationSelect.innerHTML;
+    locationSelect.innerHTML = defaultOptions;
+    
+    // Add available locations
+    locations.forEach(location => {
+        const option = document.createElement('option');
+        option.value = location.location_id;
+        option.textContent = `${location.location_id} - ${location.zone?.zone_name || 'Unknown Zone'}`;
+        locationSelect.appendChild(option);
+    });
+}
+
+function viewReceiveHistory() {
+    loadPage('transactions');
+}
+</script>
