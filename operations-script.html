@@ -1,0 +1,817 @@
+<!-- Operations Script Functions -->
+<script id="operations-script">
+/**
+ * Operations Script - Common functions for warehouse operations
+ * This file contains shared functions used across different operation modules
+ */
+
+// Global variables for operations
+let currentOperation = null;
+let scannerMode = false;
+let batchOperations = [];
+
+/**
+ * Initialize barcode scanner functionality
+ */
+function initializeScanner() {
+    if ('BarcodeDetector' in window) {
+        // Use native barcode detection if available
+        const barcodeDetector = new BarcodeDetector({
+            formats: ['code_128', 'code_39', 'ean_13', 'ean_8']
+        });
+        
+        // Setup camera scanning
+        setupCameraScanning(barcodeDetector);
+    } else {
+        // Fallback to keyboard input scanning
+        setupKeyboardScanning();
+    }
+}
+
+/**
+ * Setup camera-based barcode scanning
+ */
+function setupCameraScanning(barcodeDetector) {
+    const video = document.createElement('video');
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    navigator.mediaDevices.getUserMedia({ 
+        video: { 
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        } 
+    })
+    .then(stream => {
+        video.srcObject = stream;
+        video.play();
+        
+        video.addEventListener('loadedmetadata', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            scanFrame();
+        });
+        
+        function scanFrame() {
+            if (scannerMode) {
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                barcodeDetector.detect(canvas)
+                    .then(barcodes => {
+                        if (barcodes.length > 0) {
+                            handleBarcodeDetection(barcodes[0].rawValue);
+                        }
+                    })
+                    .catch(console.error);
+            }
+            
+            requestAnimationFrame(scanFrame);
+        }
+    })
+    .catch(error => {
+        console.error('Camera access error:', error);
+        setupKeyboardScanning();
+    });
+}
+
+/**
+ * Setup keyboard-based barcode scanning (fallback)
+ */
+function setupKeyboardScanning() {
+    let barcodeBuffer = '';
+    let lastKeyTime = 0;
+    
+    document.addEventListener('keypress', function(event) {
+        if (!scannerMode) return;
+        
+        const currentTime = Date.now();
+        
+        // Reset buffer if too much time has passed
+        if (currentTime - lastKeyTime > 100) {
+            barcodeBuffer = '';
+        }
+        
+        lastKeyTime = currentTime;
+        
+        if (event.key === 'Enter') {
+            if (barcodeBuffer.length > 0) {
+                handleBarcodeDetection(barcodeBuffer);
+                barcodeBuffer = '';
+            }
+        } else {
+            barcodeBuffer += event.key;
+        }
+    });
+}
+
+/**
+ * Handle barcode detection
+ */
+function handleBarcodeDetection(barcode) {
+    if (!scannerMode) return;
+    
+    // Validate barcode format
+    if (!isValidBarcode(barcode)) {
+        showMessage('รูปแบบบาร์โค้ดไม่ถูกต้อง', 'error');
+        return;
+    }
+    
+    // Process based on current operation
+    switch (currentOperation) {
+        case 'receive':
+            handleReceiveBarcode(barcode);
+            break;
+        case 'picking':
+            handlePickingBarcode(barcode);
+            break;
+        case 'movement':
+            handleMovementBarcode(barcode);
+            break;
+        case 'adjustment':
+            handleAdjustmentBarcode(barcode);
+            break;
+        default:
+            searchProductByBarcode(barcode);
+    }
+}
+
+/**
+ * Validate barcode format
+ */
+function isValidBarcode(barcode) {
+    // Basic validation - adjust based on your barcode formats
+    return barcode && barcode.length >= 8 && /^[0-9A-Za-z\-|]+$/.test(barcode);
+}
+
+/**
+ * Search product by barcode
+ */
+function searchProductByBarcode(barcode) {
+    googleScriptCall('searchProducts', barcode)
+        .then(response => {
+            if (response.success && response.data.length > 0) {
+                const product = response.data[0];
+                showMessage(`พบสินค้า: ${product.sku} - ${product.product_name}`, 'success');
+                
+                // Auto-fill product if in form context
+                if (typeof selectProduct === 'function') {
+                    selectProduct(product.sku, product.product_name, product.unit, product.weight_per_bag, product.bags_per_pack);
+                } else if (typeof selectPickProduct === 'function') {
+                    selectPickProduct(product.sku, product.product_name, product.unit, product.weight_per_bag, product.bags_per_pack);
+                } else if (typeof selectMoveProduct === 'function') {
+                    selectMoveProduct(product.sku, product.product_name, product.unit, product.weight_per_bag);
+                } else if (typeof selectAdjustProduct === 'function') {
+                    selectAdjustProduct(product.sku, product.product_name, product.unit, product.weight_per_bag, product.total_pieces_normal);
+                }
+            } else {
+                showMessage('ไม่พบสินค้าที่ตรงกับบาร์โค้ดนี้', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Barcode search error:', error);
+            showMessage('เกิดข้อผิดพลาดในการค้นหา', 'error');
+        });
+}
+
+/**
+ * Handle barcode scanning for receive operation
+ */
+function handleReceiveBarcode(barcode) {
+    // First try to find product by barcode
+    searchProductByBarcode(barcode);
+}
+
+/**
+ * Handle barcode scanning for picking operation
+ */
+function handlePickingBarcode(barcode) {
+    searchProductByBarcode(barcode);
+}
+
+/**
+ * Handle barcode scanning for movement operation
+ */
+function handleMovementBarcode(barcode) {
+    searchProductByBarcode(barcode);
+}
+
+/**
+ * Handle barcode scanning for adjustment operation
+ */
+function handleAdjustmentBarcode(barcode) {
+    searchProductByBarcode(barcode);
+}
+
+/**
+ * Toggle scanner mode
+ */
+function toggleScannerMode(operation = null) {
+    scannerMode = !scannerMode;
+    currentOperation = operation;
+    
+    if (scannerMode) {
+        showScannerOverlay();
+        showMessage('เปิดโหมดสแกนบาร์โค้ด', 'success');
+    } else {
+        hideScannerOverlay();
+        showMessage('ปิดโหมดสแกนบาร์โค้ด', 'info');
+    }
+}
+
+/**
+ * Show scanner overlay
+ */
+function showScannerOverlay() {
+    let overlay = document.getElementById('scannerOverlay');
+    
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'scannerOverlay';
+        overlay.className = 'fixed inset-0 bg-black bg-opacity-75 z-50 flex flex-col items-center justify-center';
+        overlay.innerHTML = `
+            <div class="bg-white rounded-lg p-6 m-4 max-w-md w-full text-center">
+                <div class="mb-4">
+                    <i class="fas fa-qrcode text-4xl text-blue-600 mb-2"></i>
+                    <h3 class="text-lg font-semibold text-gray-900">โหมดสแกนบาร์โค้ด</h3>
+                    <p class="text-sm text-gray-600 mt-2">จ่อบาร์โค้ดเข้ากับกล้อง หรือใช้สแกนเนอร์บาร์โค้ด</p>
+                </div>
+                
+                <div class="relative mb-4">
+                    <div class="w-48 h-48 mx-auto border-2 border-dashed border-blue-300 rounded-lg flex items-center justify-center">
+                        <div class="scanner-line"></div>
+                        <i class="fas fa-camera text-3xl text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <div class="space-y-2">
+                    <button onclick="toggleScannerMode()" class="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
+                        <i class="fas fa-times mr-2"></i>ปิดสแกนเนอร์
+                    </button>
+                    <button onclick="manualBarcodeEntry()" class="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-keyboard mr-2"></i>กรอกบาร์โค้ดด้วยมือ
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+    }
+    
+    overlay.classList.remove('hidden');
+    
+    // Add scanner animation
+    const style = document.createElement('style');
+    style.textContent = `
+        .scanner-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #3B82F6, transparent);
+            animation: scan 2s linear infinite;
+        }
+        
+        @keyframes scan {
+            0% { top: 0; opacity: 1; }
+            50% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+/**
+ * Hide scanner overlay
+ */
+function hideScannerOverlay() {
+    const overlay = document.getElementById('scannerOverlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+    }
+}
+
+/**
+ * Manual barcode entry
+ */
+function manualBarcodeEntry() {
+    const barcode = prompt('กรอกบาร์โค้ด:');
+    if (barcode && barcode.trim()) {
+        handleBarcodeDetection(barcode.trim());
+        toggleScannerMode(); // Close scanner
+    }
+}
+
+/**
+ * Batch operations management
+ */
+function initializeBatchOperations() {
+    batchOperations = [];
+    updateBatchOperationsDisplay();
+}
+
+/**
+ * Add operation to batch
+ */
+function addToBatch(operation) {
+    const batchId = 'BATCH_' + Date.now();
+    const batchItem = {
+        id: batchId,
+        operation: operation,
+        timestamp: new Date(),
+        status: 'pending'
+    };
+    
+    batchOperations.push(batchItem);
+    updateBatchOperationsDisplay();
+    
+    showMessage(`เพิ่มรายการเข้า Batch: ${batchId}`, 'success');
+    return batchId;
+}
+
+/**
+ * Remove operation from batch
+ */
+function removeFromBatch(batchId) {
+    const index = batchOperations.findIndex(item => item.id === batchId);
+    if (index > -1) {
+        batchOperations.splice(index, 1);
+        updateBatchOperationsDisplay();
+        showMessage(`ลบรายการออกจาก Batch: ${batchId}`, 'info');
+    }
+}
+
+/**
+ * Process all batch operations
+ */
+function processBatchOperations() {
+    if (batchOperations.length === 0) {
+        showMessage('ไม่มีรายการใน Batch', 'error');
+        return;
+    }
+    
+    showConfirmModal(
+        `คุณต้องการดำเนินการ Batch ${batchOperations.length} รายการหรือไม่?`,
+        function() {
+            executeBatchOperations();
+        }
+    );
+}
+
+/**
+ * Execute batch operations
+ */
+async function executeBatchOperations() {
+    const totalOperations = batchOperations.length;
+    let completedOperations = 0;
+    let failedOperations = 0;
+    
+    showMessage('เริ่มดำเนินการ Batch...', 'info');
+    
+    for (const batchItem of batchOperations) {
+        try {
+            batchItem.status = 'processing';
+            updateBatchOperationsDisplay();
+            
+            // Process based on operation type
+            const result = await processBatchItem(batchItem);
+            
+            if (result.success) {
+                batchItem.status = 'completed';
+                completedOperations++;
+            } else {
+                batchItem.status = 'failed';
+                batchItem.error = result.message;
+                failedOperations++;
+            }
+        } catch (error) {
+            batchItem.status = 'failed';
+            batchItem.error = error.message;
+            failedOperations++;
+        }
+        
+        updateBatchOperationsDisplay();
+        
+        // Small delay between operations
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    // Show summary
+    showMessage(
+        `Batch เสร็จสิ้น: สำเร็จ ${completedOperations} รายการ, ล้มเหลว ${failedOperations} รายการ`,
+        failedOperations === 0 ? 'success' : 'warning'
+    );
+    
+    // Clear completed items after 5 seconds
+    setTimeout(() => {
+        batchOperations = batchOperations.filter(item => item.status === 'failed');
+        updateBatchOperationsDisplay();
+    }, 5000);
+}
+
+/**
+ * Process individual batch item
+ */
+async function processBatchItem(batchItem) {
+    switch (batchItem.operation.type) {
+        case 'receive':
+            return await googleScriptCall('createTransaction', batchItem.operation.data);
+        case 'picking':
+            return await googleScriptCall('createTransaction', batchItem.operation.data);
+        case 'movement':
+            return await googleScriptCall('createTransaction', batchItem.operation.data);
+        case 'adjustment':
+            return await googleScriptCall('createTransaction', batchItem.operation.data);
+        default:
+            throw new Error('Unknown operation type');
+    }
+}
+
+/**
+ * Update batch operations display
+ */
+function updateBatchOperationsDisplay() {
+    const batchIndicator = document.getElementById('batchIndicator');
+    
+    if (!batchIndicator) {
+        createBatchIndicator();
+    }
+    
+    const count = batchOperations.length;
+    const indicator = document.getElementById('batchIndicator');
+    
+    if (count > 0) {
+        indicator.classList.remove('hidden');
+        indicator.querySelector('.batch-count').textContent = count;
+        
+        // Update status colors
+        const hasProcessing = batchOperations.some(item => item.status === 'processing');
+        const hasFailed = batchOperations.some(item => item.status === 'failed');
+        
+        indicator.className = `fixed bottom-4 right-4 z-40 p-4 rounded-lg shadow-lg cursor-pointer transition-colors ${
+            hasProcessing ? 'bg-yellow-500' : hasFailed ? 'bg-red-500' : 'bg-blue-500'
+        } text-white`;
+    } else {
+        indicator.classList.add('hidden');
+    }
+}
+
+/**
+ * Create batch indicator
+ */
+function createBatchIndicator() {
+    const indicator = document.createElement('div');
+    indicator.id = 'batchIndicator';
+    indicator.className = 'fixed bottom-4 right-4 z-40 p-4 bg-blue-500 text-white rounded-lg shadow-lg cursor-pointer transition-colors hidden';
+    indicator.onclick = showBatchModal;
+    indicator.innerHTML = `
+        <div class="flex items-center space-x-2">
+            <i class="fas fa-layer-group"></i>
+            <span>Batch: <span class="batch-count">0</span></span>
+        </div>
+    `;
+    
+    document.body.appendChild(indicator);
+}
+
+/**
+ * Show batch operations modal
+ */
+function showBatchModal() {
+    let modal = document.getElementById('batchModal');
+    
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'batchModal';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center';
+        modal.innerHTML = `
+            <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xl font-bold text-gray-900">Batch Operations</h3>
+                        <button onclick="closeBatchModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <div id="batchOperationsList" class="space-y-4 max-h-96 overflow-y-auto">
+                        <!-- Batch items will be populated here -->
+                    </div>
+                </div>
+                
+                <div class="p-6 border-t border-gray-200 flex justify-end space-x-4">
+                    <button onclick="clearBatchOperations()" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        ล้างทั้งหมด
+                    </button>
+                    <button onclick="processBatchOperations()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        ดำเนินการทั้งหมด
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+    
+    updateBatchModalContent();
+    modal.classList.remove('hidden');
+}
+
+/**
+ * Close batch modal
+ */
+function closeBatchModal() {
+    const modal = document.getElementById('batchModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+/**
+ * Update batch modal content
+ */
+function updateBatchModalContent() {
+    const container = document.getElementById('batchOperationsList');
+    
+    if (batchOperations.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-layer-group text-4xl mb-4"></i>
+                <p>ไม่มีรายการใน Batch</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const items = batchOperations.map(item => {
+        const statusColor = {
+            'pending': 'bg-gray-100 text-gray-800',
+            'processing': 'bg-yellow-100 text-yellow-800',
+            'completed': 'bg-green-100 text-green-800',
+            'failed': 'bg-red-100 text-red-800'
+        };
+        
+        const statusIcon = {
+            'pending': 'fas fa-clock',
+            'processing': 'fas fa-spinner fa-spin',
+            'completed': 'fas fa-check',
+            'failed': 'fas fa-times'
+        };
+        
+        return `
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div class="flex items-center space-x-4">
+                    <div class="w-10 h-10 ${statusColor[item.status] || 'bg-gray-100 text-gray-800'} rounded-full flex items-center justify-center">
+                        <i class="${statusIcon[item.status] || 'fas fa-question'}"></i>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">${item.operation.type.toUpperCase()}</p>
+                        <p class="text-sm text-gray-600">${item.id}</p>
+                        ${item.error ? `<p class="text-sm text-red-600">${item.error}</p>` : ''}
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusColor[item.status] || 'bg-gray-100 text-gray-800'}">
+                        ${item.status}
+                    </span>
+                    ${item.status === 'pending' ? `
+                        <button onclick="removeFromBatch('${item.id}')" class="text-red-600 hover:text-red-800">
+                            <i class="fas fa-trash text-sm"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = items;
+}
+
+/**
+ * Clear all batch operations
+ */
+function clearBatchOperations() {
+    showConfirmModal(
+        'คุณต้องการล้างรายการ Batch ทั้งหมดหรือไม่?',
+        function() {
+            batchOperations = [];
+            updateBatchOperationsDisplay();
+            closeBatchModal();
+            showMessage('ล้างรายการ Batch แล้ว', 'info');
+        }
+    );
+}
+
+/**
+ * Quick action functions
+ */
+function quickReceive() {
+    toggleScannerMode('receive');
+}
+
+function quickPicking() {
+    toggleScannerMode('picking');
+}
+
+function quickMovement() {
+    toggleScannerMode('movement');
+}
+
+function quickAdjustment() {
+    toggleScannerMode('adjustment');
+}
+
+/**
+ * Utility functions for operations
+ */
+function formatDateTime(date) {
+    return new Date(date).toLocaleString('th-TH', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function formatWeight(weight) {
+    return parseFloat(weight).toLocaleString('th-TH', {
+        minimumFractionDigits: 3,
+        maximumFractionDigits: 3
+    }) + ' กก.';
+}
+
+function formatQuantity(quantity) {
+    return parseInt(quantity).toLocaleString('th-TH') + ' ชิ้น';
+}
+
+function calculateTotalWeight(pieces, weightPerPiece) {
+    return pieces * weightPerPiece;
+}
+
+function calculatePacks(pieces, bagsPerPack) {
+    return Math.floor(pieces / bagsPerPack);
+}
+
+/**
+ * Print functions
+ */
+function printTransactionReceipt(transaction) {
+    const printWindow = window.open('', '_blank');
+    const receiptHTML = generateReceiptHTML(transaction);
+    
+    printWindow.document.write(receiptHTML);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+function generateReceiptHTML(transaction) {
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>ใบเสร็จธุรกรรม</title>
+            <style>
+                body { font-family: 'Sarabun', sans-serif; font-size: 12px; margin: 20px; }
+                .header { text-align: center; margin-bottom: 20px; }
+                .company-name { font-size: 18px; font-weight: bold; }
+                .receipt-title { font-size: 14px; margin: 10px 0; }
+                .info-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                .info-table td { padding: 5px; border-bottom: 1px solid #ddd; }
+                .label { font-weight: bold; width: 120px; }
+                .signature { margin-top: 40px; text-align: center; }
+                .signature-line { border-top: 1px solid #000; width: 200px; margin: 20px auto; }
+                @media print { 
+                    body { margin: 0; }
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="company-name">Austam Good WMS</div>
+                <div class="receipt-title">ใบเสร็จธุรกรรม</div>
+                <div>Tags ID: ${transaction.tags_id}</div>
+            </div>
+            
+            <table class="info-table">
+                <tr>
+                    <td class="label">วันที่/เวลา:</td>
+                    <td>${formatDateTime(transaction.created_at)}</td>
+                </tr>
+                <tr>
+                    <td class="label">ประเภทธุรกรรม:</td>
+                    <td>${transaction.transaction_type}</td>
+                </tr>
+                <tr>
+                    <td class="label">SKU:</td>
+                    <td>${transaction.sku}</td>
+                </tr>
+                <tr>
+                    <td class="label">ชื่อสินค้า:</td>
+                    <td>${transaction.product_name}</td>
+                </tr>
+                <tr>
+                    <td class="label">จำนวน:</td>
+                    <td>${formatQuantity(Math.abs(transaction.pieces))}</td>
+                </tr>
+                <tr>
+                    <td class="label">น้ำหนัก:</td>
+                    <td>${formatWeight(Math.abs(transaction.weight))}</td>
+                </tr>
+                <tr>
+                    <td class="label">ตำแหน่ง:</td>
+                    <td>${transaction.location_id || 'N/A'}</td>
+                </tr>
+                <tr>
+                    <td class="label">ผู้บันทึก:</td>
+                    <td>${transaction.created_by_name}</td>
+                </tr>
+            </table>
+            
+            <div class="signature">
+                <div class="signature-line"></div>
+                <div>ลายมือชื่อผู้รับ</div>
+            </div>
+        </body>
+        </html>
+    `;
+}
+
+/**
+ * Export functions
+ */
+function exportToExcel(data, filename) {
+    // Simple CSV export (for Excel compatibility)
+    const csvContent = convertToCSV(data);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename + '.csv');
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function convertToCSV(data) {
+    if (!data || data.length === 0) return '';
+    
+    const headers = Object.keys(data[0]).join(',');
+    const rows = data.map(row => 
+        Object.values(row).map(value => 
+            typeof value === 'string' ? `"${value}"` : value
+        ).join(',')
+    ).join('\n');
+    
+    return headers + '\n' + rows;
+}
+
+// Initialize operations when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize scanner if supported
+    if (typeof initializeScanner === 'function') {
+        initializeScanner();
+    }
+    
+    // Initialize batch operations
+    initializeBatchOperations();
+});
+
+// Global keyboard shortcuts
+document.addEventListener('keydown', function(event) {
+    // Ctrl/Cmd + S: Quick scanner toggle
+    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault();
+        toggleScannerMode();
+    }
+    
+    // Ctrl/Cmd + B: Show batch operations
+    if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
+        event.preventDefault();
+        if (batchOperations.length > 0) {
+            showBatchModal();
+        }
+    }
+    
+    // Escape: Close modals or scanner
+    if (event.key === 'Escape') {
+        if (scannerMode) {
+            toggleScannerMode();
+        } else {
+            // Close any open modals
+            document.querySelectorAll('.fixed.inset-0').forEach(modal => {
+                if (!modal.classList.contains('hidden')) {
+                    modal.classList.add('hidden');
+                }
+            });
+        }
+    }
+});
+
+</script>
