@@ -1,0 +1,1015 @@
+<!-- Inventory Management Content -->
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">สต๊อกสินค้า</h1>
+            <p class="text-gray-600 mt-1">ตรวจสอบและจัดการสต๊อกสินค้าคงเหลือ</p>
+        </div>
+        <div class="flex space-x-4">
+            <button onclick="refreshInventoryViews()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+                <i class="fas fa-sync-alt mr-2"></i>รีเฟรชข้อมูล
+            </button>
+            <button onclick="exportInventoryReport()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center">
+                <i class="fas fa-download mr-2"></i>ส่งออกรายงาน
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Total Products -->
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">สินค้าทั้งหมด</p>
+                    <p id="totalInventoryProducts" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <i class="fas fa-boxes text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Stock -->
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">สต๊อกรวม (ชิ้น)</p>
+                    <p id="totalStockPieces" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <i class="fas fa-cubes text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Weight -->
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">น้ำหนักรวม (กก.)</p>
+                    <p id="totalStockWeight" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-orange-100 rounded-full p-3">
+                    <i class="fas fa-weight text-orange-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="bg-white rounded-xl shadow-lg">
+        <div class="border-b border-gray-200">
+            <nav class="flex space-x-8 px-6" aria-label="Tabs">
+                <button 
+                    onclick="switchInventoryTab('main')" 
+                    class="inventory-tab py-4 px-1 border-b-2 font-medium text-sm active"
+                    data-tab="main"
+                >
+                    <i class="fas fa-warehouse mr-2"></i>สต๊อกหลัก
+                </button>
+                <button 
+                    onclick="switchInventoryTab('pickface')" 
+                    class="inventory-tab py-4 px-1 border-b-2 font-medium text-sm"
+                    data-tab="pickface"
+                >
+                    <i class="fas fa-hand-paper mr-2"></i>Pick Face
+                </button>
+                <button 
+                    onclick="switchInventoryTab('premium')" 
+                    class="inventory-tab py-4 px-1 border-b-2 font-medium text-sm"
+                    data-tab="premium"
+                >
+                    <i class="fas fa-star mr-2"></i>Premium
+                </button>
+                <button 
+                    onclick="switchInventoryTab('locations')" 
+                    class="inventory-tab py-4 px-1 border-b-2 font-medium text-sm"
+                    data-tab="locations"
+                >
+                    <i class="fas fa-map-marker-alt mr-2"></i>ตามตำแหน่ง
+                </button>
+                <button 
+                    onclick="switchInventoryTab('alerts')" 
+                    class="inventory-tab py-4 px-1 border-b-2 font-medium text-sm"
+                    data-tab="alerts"
+                >
+                    <i class="fas fa-exclamation-triangle mr-2"></i>แจ้งเตือน
+                </button>
+            </nav>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="p-6">
+            <!-- Search and Filter -->
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-4 mb-6">
+                <div class="flex-1 max-w-md">
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="inventorySearch" 
+                            placeholder="ค้นหาด้วย SKU หรือชื่อสินค้า..." 
+                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                </div>
+
+                <div class="flex space-x-4">
+                    <select id="inventoryTypeFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">ประเภทสินค้าทั้งหมด</option>
+                        <option value="สินค้าสำเร็จรูป">สินค้าสำเร็จรูป</option>
+                        <option value="สินค้า Premium">สินค้า Premium</option>
+                        <option value="วัตถุดิบ">วัตถุดิบ</option>
+                        <option value="บรรจุภัณฑ์">บรรจุภัณฑ์</option>
+                    </select>
+
+                    <select id="stockLevelFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">ระดับสต๊อกทั้งหมด</option>
+                        <option value="normal">ปกติ (> 100)</option>
+                        <option value="low">ต่ำ (50-100)</option>
+                        <option value="critical">วิกฤต (< 50)</option>
+                        <option value="zero">หมด (0)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Main Stock Tab -->
+            <div id="mainStockTab" class="inventory-tab-content">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อสินค้า</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ประเภท</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สต๊อกปกติ</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สต๊อกเสีย</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">น้ำหนักรวม</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">อัพเดทล่าสุด</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">การจัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mainStockTableBody" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                                    <i class="fas fa-spinner fa-spin text-2xl mb-4"></i>
+                                    <p>กำลังโหลดข้อมูลสต๊อก...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Pick Face Tab -->
+            <div id="pickfaceTab" class="inventory-tab-content hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อสินค้า</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สต๊อก Pick Face</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">น้ำหนัก</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">อัพเดทล่าสุด</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">การจัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pickfaceTableBody" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                                    <i class="fas fa-spinner fa-spin text-2xl mb-4"></i>
+                                    <p>กำลังโหลดข้อมูล Pick Face...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Premium Tab -->
+            <div id="premiumTab" class="inventory-tab-content hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-blue-50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-blue-900 mb-4">
+                            <i class="fas fa-star mr-2"></i>สินค้า Premium
+                        </h3>
+                        <div id="premiumInventoryList">
+                            <div class="text-center py-8 text-gray-500">
+                                <i class="fas fa-spinner fa-spin text-2xl mb-4"></i>
+                                <p>กำลังโหลดข้อมูล Premium...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-yellow-50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-yellow-900 mb-4">
+                            <i class="fas fa-chart-pie mr-2"></i>สถิติ Premium
+                        </h3>
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">จำนวนสินค้า Premium:</span>
+                                <span id="premiumProductCount" class="font-semibold">-</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">สต๊อกรวม:</span>
+                                <span id="premiumTotalStock" class="font-semibold">-</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">มูลค่าโดยประมาณ:</span>
+                                <span id="premiumTotalValue" class="font-semibold">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Locations Tab -->
+            <div id="locationsTab" class="inventory-tab-content hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="locationsGrid">
+                    <div class="col-span-full text-center py-8 text-gray-500">
+                        <i class="fas fa-spinner fa-spin text-2xl mb-4"></i>
+                        <p>กำลังโหลดข้อมูลตำแหน่งเก็บ...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts Tab -->
+            <div id="alertsTab" class="inventory-tab-content hidden">
+                <div class="space-y-6">
+                    <!-- Critical Stock Alerts -->
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-red-900 mb-4">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>สต๊อกวิกฤต (< 50 ชิ้น)
+                        </h3>
+                        <div id="criticalStockAlerts">
+                            <div class="text-center py-8 text-gray-500">
+                                <i class="fas fa-spinner fa-spin text-2xl mb-4"></i>
+                                <p>กำลังตรวจสอบสต๊อกวิกฤต...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Low Stock Alerts -->
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-yellow-900 mb-4">
+                            <i class="fas fa-exclamation-circle mr-2"></i>สต๊อกต่ำ (50-100 ชิ้น)
+                        </h3>
+                        <div id="lowStockAlerts">
+                            <div class="text-center py-8 text-gray-500">
+                                <i class="fas fa-spinner fa-spin text-2xl mb-4"></i>
+                                <p>กำลังตรวจสอบสต๊อกต่ำ...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Out of Stock -->
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                            <i class="fas fa-times-circle mr-2"></i>สินค้าหมด (0 ชิ้น)
+                        </h3>
+                        <div id="outOfStockAlerts">
+                            <div class="text-center py-8 text-gray-500">
+                                <i class="fas fa-spinner fa-spin text-2xl mb-4"></i>
+                                <p>กำลังตรวจสอบสินค้าหมด...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script id="inventory-script">
+let currentInventoryTab = 'main';
+let inventoryData = {
+    main: [],
+    pickface: [],
+    premium: [],
+    locations: [],
+    alerts: {
+        critical: [],
+        low: [],
+        outOfStock: []
+    }
+};
+
+function loadInventory() {
+    document.getElementById('mainContent').innerHTML = `<?= include('inventory'); ?>`;
+    
+    // Initialize inventory page
+    initializeInventoryPage();
+}
+
+function initializeInventoryPage() {
+    // Setup event listeners
+    setupInventoryEventListeners();
+    
+    // Load initial data
+    loadInventoryData();
+    
+    // Setup tab styling
+    setupInventoryTabStyling();
+}
+
+function setupInventoryEventListeners() {
+    // Search functionality
+    const searchInput = document.getElementById('inventorySearch');
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                filterCurrentInventoryTab();
+            }, 500);
+        });
+    }
+
+    // Filter functionality
+    const typeFilter = document.getElementById('inventoryTypeFilter');
+    const stockFilter = document.getElementById('stockLevelFilter');
+    
+    if (typeFilter) {
+        typeFilter.addEventListener('change', filterCurrentInventoryTab);
+    }
+    
+    if (stockFilter) {
+        stockFilter.addEventListener('change', filterCurrentInventoryTab);
+    }
+}
+
+function setupInventoryTabStyling() {
+    const style = document.createElement('style');
+    style.textContent = `
+        .inventory-tab {
+            border-bottom-color: transparent;
+            color: #6B7280;
+            transition: all 0.2s;
+        }
+        .inventory-tab:hover {
+            color: #3B82F6;
+            border-bottom-color: #E5E7EB;
+        }
+        .inventory-tab.active {
+            color: #3B82F6;
+            border-bottom-color: #3B82F6;
+        }
+        .inventory-tab-content {
+            display: none;
+        }
+        .inventory-tab-content:not(.hidden) {
+            display: block;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function loadInventoryData() {
+    // Load main stock data
+    loadMainStockData();
+    
+    // Load pick face data
+    loadPickFaceData();
+    
+    // Load premium data
+    loadPremiumData();
+    
+    // Load locations data
+    loadLocationsData();
+    
+    // Load alerts data
+    loadAlertsData();
+    
+    // Load summary stats
+    loadInventorySummary();
+}
+
+function loadMainStockData() {
+    googleScriptCall('getCurrentStockReport')
+        .then(response => {
+            if (response.success) {
+                inventoryData.main = response.data || [];
+                if (currentInventoryTab === 'main') {
+                    displayMainStockData();
+                }
+            } else {
+                console.error('Failed to load main stock:', response.message);
+                displayInventoryError('mainStockTableBody', 8);
+            }
+        })
+        .catch(error => {
+            console.error('Main stock loading error:', error);
+            displayInventoryError('mainStockTableBody', 8);
+        });
+}
+
+function loadPickFaceData() {
+    googleScriptCall('getPickFaceReport')
+        .then(response => {
+            if (response.success) {
+                inventoryData.pickface = response.data || [];
+                if (currentInventoryTab === 'pickface') {
+                    displayPickFaceData();
+                }
+            } else {
+                console.error('Failed to load pick face data:', response.message);
+                displayInventoryError('pickfaceTableBody', 6);
+            }
+        })
+        .catch(error => {
+            console.error('Pick face loading error:', error);
+            displayInventoryError('pickfaceTableBody', 6);
+        });
+}
+
+function loadPremiumData() {
+    // For now, show placeholder
+    if (currentInventoryTab === 'premium') {
+        displayPremiumData();
+    }
+}
+
+function loadLocationsData() {
+    googleScriptCall('getLocationReport')
+        .then(response => {
+            if (response.success) {
+                inventoryData.locations = response.data || [];
+                if (currentInventoryTab === 'locations') {
+                    displayLocationsData();
+                }
+            } else {
+                console.error('Failed to load locations data:', response.message);
+                displayLocationsError();
+            }
+        })
+        .catch(error => {
+            console.error('Locations loading error:', error);
+            displayLocationsError();
+        });
+}
+
+function loadAlertsData() {
+    const mainStock = inventoryData.main;
+    
+    if (mainStock.length > 0) {
+        // Categorize alerts
+        inventoryData.alerts.critical = mainStock.filter(item => (item.total_pieces_normal || 0) < 50 && (item.total_pieces_normal || 0) > 0);
+        inventoryData.alerts.low = mainStock.filter(item => (item.total_pieces_normal || 0) >= 50 && (item.total_pieces_normal || 0) <= 100);
+        inventoryData.alerts.outOfStock = mainStock.filter(item => (item.total_pieces_normal || 0) === 0);
+        
+        if (currentInventoryTab === 'alerts') {
+            displayAlertsData();
+        }
+    }
+}
+
+function loadInventorySummary() {
+    const mainStock = inventoryData.main;
+    
+    if (mainStock.length > 0) {
+        const totalProducts = mainStock.length;
+        const totalPieces = mainStock.reduce((sum, item) => sum + (item.total_pieces_normal || 0), 0);
+        const totalWeight = mainStock.reduce((sum, item) => sum + (item.total_weight_normal || 0), 0);
+        
+        const totalProductsEl = document.getElementById('totalInventoryProducts');
+        const totalPiecesEl = document.getElementById('totalStockPieces');
+        const totalWeightEl = document.getElementById('totalStockWeight');
+        
+        if (totalProductsEl) totalProductsEl.textContent = totalProducts.toLocaleString();
+        if (totalPiecesEl) totalPiecesEl.textContent = totalPieces.toLocaleString();
+        if (totalWeightEl) totalWeightEl.textContent = totalWeight.toLocaleString();
+    }
+}
+
+function switchInventoryTab(tabName) {
+    // Update active tab
+    document.querySelectorAll('.inventory-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    
+    // Hide all tab contents
+    document.querySelectorAll('.inventory-tab-content').forEach(content => {
+        content.classList.add('hidden');
+    });
+    
+    // Show selected tab content
+    const tabMap = {
+        'main': 'mainStockTab',
+        'pickface': 'pickfaceTab',
+        'premium': 'premiumTab',
+        'locations': 'locationsTab',
+        'alerts': 'alertsTab'
+    };
+    
+    const tabContent = document.getElementById(tabMap[tabName]);
+    if (tabContent) {
+        tabContent.classList.remove('hidden');
+    }
+    
+    currentInventoryTab = tabName;
+    
+    // Load data for the selected tab if not already loaded
+    switch (tabName) {
+        case 'main':
+            displayMainStockData();
+            break;
+        case 'pickface':
+            displayPickFaceData();
+            break;
+        case 'premium':
+            displayPremiumData();
+            break;
+        case 'locations':
+            displayLocationsData();
+            break;
+        case 'alerts':
+            displayAlertsData();
+            break;
+    }
+}
+
+function displayMainStockData() {
+    const tbody = document.getElementById('mainStockTableBody');
+    if (!tbody) return;
+    
+    const data = getFilteredInventoryData('main');
+    
+    if (data.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                    <i class="fas fa-inbox text-4xl mb-4"></i>
+                    <p class="text-lg">ไม่พบข้อมูลสต๊อก</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    const rows = data.map(item => {
+        const normalStock = item.total_pieces_normal || 0;
+        const damagedStock = item.total_pieces_damaged || 0;
+        const totalWeight = item.total_weight_normal || 0;
+        
+        let stockColor = 'text-green-600';
+        if (normalStock < 100) stockColor = 'text-yellow-600';
+        if (normalStock < 50) stockColor = 'text-red-600';
+        if (normalStock === 0) stockColor = 'text-gray-400';
+        
+        const lastUpdated = item.last_updated ? new Date(item.last_updated).toLocaleDateString('th-TH') : 'N/A';
+        
+        return `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${item.sku}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="text-sm text-gray-900 font-medium">${item.product_name || 'N/A'}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                        สินค้าสำเร็จรูป
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium ${stockColor}">
+                        ${normalStock.toLocaleString()} ชิ้น
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-red-600">
+                        ${damagedStock.toLocaleString()} ชิ้น
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">
+                        ${totalWeight.toLocaleString()} กก.
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${lastUpdated}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button 
+                        onclick="viewStockDetails('${item.sku}')" 
+                        class="text-blue-600 hover:text-blue-900 transition-colors"
+                        title="ดูรายละเอียด"
+                    >
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button 
+                        onclick="adjustStock('${item.sku}')" 
+                        class="text-green-600 hover:text-green-900 transition-colors"
+                        title="ปรับสต๊อก"
+                    >
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    tbody.innerHTML = rows;
+}
+
+function displayPickFaceData() {
+    const tbody = document.getElementById('pickfaceTableBody');
+    if (!tbody) return;
+    
+    const data = getFilteredInventoryData('pickface');
+    
+    if (data.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                    <i class="fas fa-inbox text-4xl mb-4"></i>
+                    <p class="text-lg">ไม่พบข้อมูล Pick Face</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    const rows = data.map(item => {
+        const pfPieces = item.pf_pieces || 0;
+        const pfWeight = item.pf_weight || 0;
+        const lastUpdated = item.last_updated ? new Date(item.last_updated).toLocaleDateString('th-TH') : 'N/A';
+        
+        let stockColor = 'text-green-600';
+        if (pfPieces < 50) stockColor = 'text-yellow-600';
+        if (pfPieces < 20) stockColor = 'text-red-600';
+        
+        return `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${item.sku}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="text-sm text-gray-900 font-medium">${item.product_name || 'N/A'}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium ${stockColor}">
+                        ${pfPieces.toLocaleString()} ชิ้น
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">
+                        ${pfWeight.toLocaleString()} กก.
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${lastUpdated}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button 
+                        onclick="replenishPickFace('${item.sku}')" 
+                        class="text-blue-600 hover:text-blue-900 transition-colors"
+                        title="เติมสต๊อก Pick Face"
+                    >
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    tbody.innerHTML = rows;
+}
+
+function displayPremiumData() {
+    const container = document.getElementById('premiumInventoryList');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="text-center py-8 text-blue-600">
+            <i class="fas fa-star text-4xl mb-4"></i>
+            <p class="text-lg">ฟังก์ชัน Premium กำลังพัฒนา</p>
+            <p class="text-sm">ข้อมูลสินค้า Premium จะแสดงที่นี่</p>
+        </div>
+    `;
+}
+
+function displayLocationsData() {
+    const container = document.getElementById('locationsGrid');
+    if (!container) return;
+    
+    const data = inventoryData.locations;
+    
+    if (data.length === 0) {
+        container.innerHTML = `
+            <div class="col-span-full text-center py-8 text-gray-500">
+                <i class="fas fa-map-marker-alt text-4xl mb-4"></i>
+                <p class="text-lg">ไม่พบข้อมูลตำแหน่งเก็บ</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const cards = data.map(location => {
+        const isOccupied = location.current_pieces > 0;
+        const statusColor = isOccupied ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800';
+        const statusText = isOccupied ? 'ไม่ว่าง' : 'ว่าง';
+        
+        return `
+            <div class="bg-white rounded-lg shadow border-l-4 ${isOccupied ? 'border-red-500' : 'border-green-500'} p-4">
+                <div class="flex justify-between items-start mb-3">
+                    <h4 class="font-semibold text-gray-900">${location.location_code}</h4>
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusColor}">
+                        ${statusText}
+                    </span>
+                </div>
+                
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">โซน:</span>
+                        <span class="font-medium">${location.zone_name || 'N/A'}</span>
+                    </div>
+                    
+                    ${isOccupied ? `
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">SKU:</span>
+                            <span class="font-medium">${location.sku || 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">จำนวน:</span>
+                            <span class="font-medium">${(location.current_pieces || 0).toLocaleString()} ชิ้น</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">น้ำหนัก:</span>
+                            <span class="font-medium">${(location.current_weight || 0).toLocaleString()} กก.</span>
+                        </div>
+                    ` : `
+                        <div class="text-center py-4 text-gray-400">
+                            <i class="fas fa-inbox text-2xl mb-2"></i>
+                            <p>พื้นที่ว่าง</p>
+                        </div>
+                    `}
+                </div>
+                
+                <div class="mt-4 flex space-x-2">
+                    <button 
+                        onclick="viewLocationDetails('${location.location_code}')"
+                        class="flex-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
+                    >
+                        ดูรายละเอียด
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = cards;
+}
+
+function displayAlertsData() {
+    displayCriticalStockAlerts();
+    displayLowStockAlerts();
+    displayOutOfStockAlerts();
+}
+
+function displayCriticalStockAlerts() {
+    const container = document.getElementById('criticalStockAlerts');
+    if (!container) return;
+    
+    const criticalItems = inventoryData.alerts.critical || [];
+    
+    if (criticalItems.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-8 text-green-600">
+                <i class="fas fa-check-circle text-4xl mb-4"></i>
+                <p class="text-lg">ไม่มีสต๊อกวิกฤต</p>
+                <p class="text-sm">สต๊อกสินค้าทั้งหมดอยู่ในระดับปลอดภัย</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const alerts = criticalItems.map(item => `
+        <div class="flex items-center justify-between p-4 bg-white rounded-lg border border-red-200">
+            <div class="flex items-center space-x-4">
+                <div class="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div>
+                    <p class="font-medium text-gray-900">${item.sku}</p>
+                    <p class="text-sm text-gray-600">${item.product_name || 'N/A'}</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-lg font-bold text-red-600">${(item.total_pieces_normal || 0).toLocaleString()}</p>
+                <p class="text-sm text-gray-500">ชิ้น</p>
+            </div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = alerts;
+}
+
+function displayLowStockAlerts() {
+    const container = document.getElementById('lowStockAlerts');
+    if (!container) return;
+    
+    const lowItems = inventoryData.alerts.low || [];
+    
+    if (lowItems.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-8 text-green-600">
+                <i class="fas fa-check-circle text-4xl mb-4"></i>
+                <p class="text-lg">ไม่มีสต๊อกต่ำ</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const alerts = lowItems.map(item => `
+        <div class="flex items-center justify-between p-4 bg-white rounded-lg border border-yellow-200">
+            <div class="flex items-center space-x-4">
+                <div class="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <div>
+                    <p class="font-medium text-gray-900">${item.sku}</p>
+                    <p class="text-sm text-gray-600">${item.product_name || 'N/A'}</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-lg font-bold text-yellow-600">${(item.total_pieces_normal || 0).toLocaleString()}</p>
+                <p class="text-sm text-gray-500">ชิ้น</p>
+            </div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = alerts;
+}
+
+function displayOutOfStockAlerts() {
+    const container = document.getElementById('outOfStockAlerts');
+    if (!container) return;
+    
+    const outOfStockItems = inventoryData.alerts.outOfStock || [];
+    
+    if (outOfStockItems.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-8 text-green-600">
+                <i class="fas fa-check-circle text-4xl mb-4"></i>
+                <p class="text-lg">ไม่มีสินค้าหมด</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const alerts = outOfStockItems.map(item => `
+        <div class="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+            <div class="flex items-center space-x-4">
+                <div class="w-10 h-10 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+                <div>
+                    <p class="font-medium text-gray-900">${item.sku}</p>
+                    <p class="text-sm text-gray-600">${item.product_name || 'N/A'}</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-lg font-bold text-gray-400">0</p>
+                <p class="text-sm text-gray-500">ชิ้น</p>
+            </div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = alerts;
+}
+
+function getFilteredInventoryData(tabType) {
+    const data = inventoryData[tabType] || [];
+    const searchTerm = document.getElementById('inventorySearch')?.value.toLowerCase() || '';
+    const typeFilter = document.getElementById('inventoryTypeFilter')?.value || '';
+    const stockFilter = document.getElementById('stockLevelFilter')?.value || '';
+    
+    let filtered = data;
+    
+    // Search filter
+    if (searchTerm) {
+        filtered = filtered.filter(item => 
+            item.sku.toLowerCase().includes(searchTerm) ||
+            (item.product_name || '').toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    // Type filter (implement based on your data structure)
+    // Stock level filter
+    if (stockFilter && tabType === 'main') {
+        filtered = filtered.filter(item => {
+            const stock = item.total_pieces_normal || 0;
+            switch (stockFilter) {
+                case 'normal': return stock > 100;
+                case 'low': return stock >= 50 && stock <= 100;
+                case 'critical': return stock > 0 && stock < 50;
+                case 'zero': return stock === 0;
+                default: return true;
+            }
+        });
+    }
+    
+    return filtered;
+}
+
+function filterCurrentInventoryTab() {
+    switch (currentInventoryTab) {
+        case 'main':
+            displayMainStockData();
+            break;
+        case 'pickface':
+            displayPickFaceData();
+            break;
+        case 'premium':
+            displayPremiumData();
+            break;
+        case 'locations':
+            displayLocationsData();
+            break;
+        case 'alerts':
+            displayAlertsData();
+            break;
+    }
+}
+
+function displayInventoryError(containerId, colspan) {
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.innerHTML = `
+            <tr>
+                <td colspan="${colspan}" class="px-6 py-12 text-center text-red-500">
+                    <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                    <p class="text-lg">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+                    <button onclick="loadInventoryData()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        ลองใหม่
+                    </button>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function displayLocationsError() {
+    const container = document.getElementById('locationsGrid');
+    if (container) {
+        container.innerHTML = `
+            <div class="col-span-full text-center py-8 text-red-500">
+                <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                <p class="text-lg">เกิดข้อผิดพลาดในการโหลดข้อมูลตำแหน่งเก็บ</p>
+                <button onclick="loadLocationsData()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    ลองใหม่
+                </button>
+            </div>
+        `;
+    }
+}
+
+// Action functions
+function viewStockDetails(sku) {
+    showMessage(`ดูรายละเอียดสต๊อก ${sku} - ฟังก์ชันกำลังพัฒนา`, 'info');
+}
+
+function adjustStock(sku) {
+    loadPage('adjustment'); // Navigate to stock adjustment page
+}
+
+function replenishPickFace(sku) {
+    showMessage(`เติมสต๊อก Pick Face สำหรับ ${sku} - ฟังก์ชันกำลังพัฒนา`, 'info');
+}
+
+function viewLocationDetails(locationCode) {
+    showMessage(`ดูรายละเอียดตำแหน่ง ${locationCode} - ฟังก์ชันกำลังพัฒนา`, 'info');
+}
+
+function exportInventoryReport() {
+    showMessage('กำลังเตรียมรายงานสต๊อก...', 'success');
+    setTimeout(() => {
+        showMessage('ฟังก์ชันส่งออกรายงานยังไม่ได้ implement', 'error');
+    }, 1000);
+}
+
+function refreshInventoryViews() {
+    showLoading();
+    
+    googleScriptCall('refreshInventoryViews')
+        .then(response => {
+            if (response.success) {
+                showMessage('รีเฟรชข้อมูลสต๊อกเรียบร้อยแล้ว', 'success');
+                loadInventoryData(); // Reload all data
+            } else {
+                showMessage('เกิดข้อผิดพลาดในการรีเฟรชข้อมูล', 'error');
+            }
+            hideLoading();
+        })
+        .catch(error => {
+            console.error('Refresh error:', error);
+            showMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+            hideLoading();
+        });
+}
+</script>
