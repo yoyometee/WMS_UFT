@@ -1,0 +1,467 @@
+<script>
+// Transactions Script Functions
+let transactionsData = [];
+let transactionTypes = [];
+let currentFilters = {
+    dateFrom: '',
+    dateTo: '',
+    sku: '',
+    mainType: '',
+    status: ''
+};
+
+async function loadTransactions() {
+    try {
+        const content = `
+            <div class="space-y-6">
+                <!-- Header -->
+                <div class="flex justify-between items-center">
+                    <h1 class="text-3xl font-bold text-gray-800">ประวัติการเคลื่อนไหว</h1>
+                    <div class="flex space-x-2">
+                        <button onclick="exportTransactions()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-file-excel mr-2"></i>ส่งออก Excel
+                        </button>
+                        <button onclick="refreshTransactions()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-sync-alt mr-2"></i>รีเฟรช
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">ตัวกรองข้อมูล</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">วันที่เริ่มต้น</label>
+                            <input type="date" id="dateFromFilter" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   onchange="applyFilters()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">วันที่สิ้นสุด</label>
+                            <input type="date" id="dateToFilter" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   onchange="applyFilters()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">SKU</label>
+                            <input type="text" id="skuFilter" placeholder="ค้นหา SKU"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   onkeyup="debounceFilter()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ประเภทธุรกรรม</label>
+                            <select id="mainTypeFilter" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    onchange="applyFilters()">
+                                <option value="">ทุกประเภท</option>
+                                <option value="เข้า">เข้า</option>
+                                <option value="ออก">ออก</option>
+                                <option value="โอน">โอน</option>
+                                <option value="ปรับปรุง">ปรับปรุง</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="clearTransactionFilters()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors w-full">
+                                <i class="fas fa-times mr-2"></i>ล้างตัวกรอง
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div id="transactionSummary" class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <!-- Summary cards will be populated here -->
+                </div>
+
+                <!-- Transactions Table -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-semibold text-gray-800">รายการธุรกรรม</h3>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm text-gray-500">แสดง</span>
+                                <select id="itemsPerPage" onchange="changeItemsPerPage()" 
+                                        class="px-2 py-1 border border-gray-300 rounded">
+                                    <option value="25">25</option>
+                                    <option value="50" selected>50</option>
+                                    <option value="100">100</option>
+                                    <option value="200">200</option>
+                                </select>
+                                <span class="text-sm text-gray-500">รายการ</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">วันที่/เวลา</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tags ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ประเภท</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">จำนวน</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ผู้ดำเนินการ</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">การจัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Loading placeholder -->
+                                <tr>
+                                    <td colspan="8" class="px-6 py-12 text-center">
+                                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                                        <p class="text-gray-500 mt-2">กำลังโหลดข้อมูล...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div id="paginationContainer" class="px-6 py-4 border-t border-gray-200">
+                        <!-- Pagination will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transaction Details Modal -->
+            <div id="transactionDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center">
+                <div class="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold">รายละเอียดธุรกรรม</h3>
+                        <button onclick="hideTransactionDetails()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <div id="transactionDetailsContent">
+                        <!-- Content will be populated here -->
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('mainContent').innerHTML = content;
+        await loadTransactionsData();
+        
+    } catch (error) {
+        console.error('Error loading transactions:', error);
+        showMessage('เกิดข้อผิดพลาดในการโหลดหน้าประวัติการเคลื่อนไหว', 'error');
+    }
+}
+
+async function loadTransactionsData() {
+    try {
+        // Load transaction types first
+        const typesResult = await googleScriptCall('getTransactionTypes');
+        if (typesResult.success) {
+            transactionTypes = typesResult.data;
+        }
+        
+        // Load transactions with current filters
+        const filters = {
+            limit: parseInt(document.getElementById('itemsPerPage')?.value || 50),
+            ...currentFilters
+        };
+        
+        const result = await googleScriptCall('getTransactions', filters);
+        
+        if (result.success) {
+            transactionsData = result.data;
+            renderTransactionsTable(transactionsData);
+            updateTransactionSummary(transactionsData);
+        } else {
+            showMessage('เกิดข้อผิดพลาดในการโหลดข้อมูลธุรกรรม: ' + result.message, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error loading transactions data:', error);
+        showMessage('เกิดข้อผิดพลาดในการโหลดข้อมูลธุรกรรม', 'error');
+    }
+}
+
+function renderTransactionsTable(transactions) {
+    const tbody = document.getElementById('transactionsTableBody');
+    
+    if (!transactions || transactions.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                    <i class="fas fa-inbox text-4xl mb-2"></i>
+                    <p>ไม่มีข้อมูลธุรกรรม</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const rows = transactions.map(transaction => `
+        <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                ${formatDateTime(transaction.created_at)}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap font-mono text-sm text-blue-600">
+                ${transaction.tags_id || 'N/A'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                ${transaction.products?.sku || 'N/A'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <div>
+                    <span class="font-medium text-gray-900">${transaction.transaction_types?.main_type || 'N/A'}</span>
+                    <div class="text-xs text-gray-500">${transaction.transaction_types?.sub_type || ''}</div>
+                </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <div>
+                    <div>${(transaction.packs || 0).toLocaleString()} แพ็ค</div>
+                    <div class="text-xs text-gray-500">${(transaction.pieces || 0).toLocaleString()} ชิ้น</div>
+                </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(transaction.status)}">
+                    ${transaction.status || 'ปกติ'}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${transaction.created_by_name || 'N/A'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <button onclick="viewTransactionDetails('${transaction.id}')" class="text-blue-600 hover:text-blue-900">
+                    <i class="fas fa-eye"></i> ดูรายละเอียด
+                </button>
+            </td>
+        </tr>
+    `).join('');
+
+    tbody.innerHTML = rows;
+}
+
+function getStatusBadgeClass(status) {
+    switch (status) {
+        case 'ปกติ':
+            return 'bg-green-100 text-green-800';
+        case 'รอตรวจสอบ':
+            return 'bg-yellow-100 text-yellow-800';
+        case 'เสียหาย':
+            return 'bg-red-100 text-red-800';
+        case 'ยกเลิก':
+            return 'bg-gray-100 text-gray-800';
+        default:
+            return 'bg-blue-100 text-blue-800';
+    }
+}
+
+function updateTransactionSummary(transactions) {
+    const summary = {
+        total: transactions.length,
+        incoming: transactions.filter(t => t.transaction_types?.main_type === 'เข้า').length,
+        outgoing: transactions.filter(t => t.transaction_types?.main_type === 'ออก').length,
+        adjustments: transactions.filter(t => t.transaction_types?.main_type === 'ปรับปรุง').length
+    };
+
+    const summaryHtml = `
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <div class="flex items-center">
+                <div class="p-3 bg-blue-100 rounded-full">
+                    <i class="fas fa-list text-blue-600 text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">ธุรกรรมทั้งหมด</p>
+                    <p class="text-2xl font-bold text-blue-600">${summary.total.toLocaleString()}</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <div class="flex items-center">
+                <div class="p-3 bg-green-100 rounded-full">
+                    <i class="fas fa-arrow-down text-green-600 text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">รับเข้า</p>
+                    <p class="text-2xl font-bold text-green-600">${summary.incoming.toLocaleString()}</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <div class="flex items-center">
+                <div class="p-3 bg-red-100 rounded-full">
+                    <i class="fas fa-arrow-up text-red-600 text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">จ่ายออก</p>
+                    <p class="text-2xl font-bold text-red-600">${summary.outgoing.toLocaleString()}</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <div class="flex items-center">
+                <div class="p-3 bg-orange-100 rounded-full">
+                    <i class="fas fa-edit text-orange-600 text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">ปรับปรุง</p>
+                    <p class="text-2xl font-bold text-orange-600">${summary.adjustments.toLocaleString()}</p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('transactionSummary').innerHTML = summaryHtml;
+}
+
+// Filter functions
+let filterTimeout;
+function debounceFilter() {
+    clearTimeout(filterTimeout);
+    filterTimeout = setTimeout(applyFilters, 500);
+}
+
+async function applyFilters() {
+    currentFilters = {
+        dateFrom: document.getElementById('dateFromFilter').value,
+        dateTo: document.getElementById('dateToFilter').value,
+        sku: document.getElementById('skuFilter').value,
+        mainType: document.getElementById('mainTypeFilter').value
+    };
+    
+    showLoading();
+    await loadTransactionsData();
+    hideLoading();
+}
+
+function clearTransactionFilters() {
+    document.getElementById('dateFromFilter').value = '';
+    document.getElementById('dateToFilter').value = '';
+    document.getElementById('skuFilter').value = '';
+    document.getElementById('mainTypeFilter').value = '';
+    
+    currentFilters = {
+        dateFrom: '',
+        dateTo: '',
+        sku: '',
+        mainType: ''
+    };
+    
+    applyFilters();
+}
+
+function changeItemsPerPage() {
+    applyFilters();
+}
+
+async function refreshTransactions() {
+    showLoading();
+    await loadTransactionsData();
+    hideLoading();
+    showMessage('รีเฟรชข้อมูลเรียบร้อยแล้ว', 'success');
+}
+
+function viewTransactionDetails(transactionId) {
+    const transaction = transactionsData.find(t => t.id == transactionId);
+    if (!transaction) return;
+    
+    const detailsHtml = `
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div><strong>Tags ID:</strong> ${transaction.tags_id || 'N/A'}</div>
+                <div><strong>วันที่/เวลา:</strong> ${formatDateTime(transaction.created_at)}</div>
+                <div><strong>SKU:</strong> ${transaction.products?.sku || 'N/A'}</div>
+                <div><strong>ชื่อสินค้า:</strong> ${transaction.products?.product_name || 'N/A'}</div>
+                <div><strong>ประเภทหลัก:</strong> ${transaction.transaction_types?.main_type || 'N/A'}</div>
+                <div><strong>ประเภทย่อย:</strong> ${transaction.transaction_types?.sub_type || 'N/A'}</div>
+                <div><strong>ID พาเลท:</strong> ${transaction.pallet_id || 'N/A'}</div>
+                <div><strong>หมายเลขรถ:</strong> ${transaction.truck_number || 'N/A'}</div>
+                <div><strong>จุดรับ/ส่ง:</strong> ${transaction.point_number || 'N/A'}</div>
+                <div><strong>ตำแหน่งเก็บ:</strong> ${transaction.warehouse_locations?.location_id || 'N/A'}</div>
+                <div><strong>สีพาเลท:</strong> ${transaction.pallet_color || 'N/A'}</div>
+                <div><strong>จำนวนแพ็ค:</strong> ${(transaction.packs || 0).toLocaleString()}</div>
+                <div><strong>จำนวนชิ้น:</strong> ${(transaction.pieces || 0).toLocaleString()}</div>
+                <div><strong>น้ำหนัก:</strong> ${(transaction.weight || 0).toLocaleString()} กก.</div>
+                <div><strong>เอกสาร Lot:</strong> ${transaction.lot_document || 'N/A'}</div>
+                <div><strong>รหัสลูกค้า:</strong> ${transaction.customer_code || 'N/A'}</div>
+                <div><strong>ชื่อลูกค้า:</strong> ${transaction.customer_name || 'N/A'}</div>
+                <div><strong>วันที่รับ:</strong> ${transaction.received_date ? formatDate(transaction.received_date) : 'N/A'}</div>
+                <div><strong>วันหมดอายุ:</strong> ${transaction.expiration_date ? formatDate(transaction.expiration_date) : 'N/A'}</div>
+                <div><strong>เลขที่ส่งของ:</strong> ${transaction.delivery_job_number || 'N/A'}</div>
+                <div><strong>สถานะ:</strong> 
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(transaction.status)}">
+                        ${transaction.status || 'ปกติ'}
+                    </span>
+                </div>
+                <div><strong>จำนวนพาเลท:</strong> ${transaction.number_pallet || 'N/A'}</div>
+                <div><strong>ผู้ดำเนินการ:</strong> ${transaction.created_by_name || 'N/A'}</div>
+            </div>
+            
+            ${transaction.remark ? `
+                <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <strong>หมายเหตุ:</strong><br>
+                    ${transaction.remark}
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
+    document.getElementById('transactionDetailsContent').innerHTML = detailsHtml;
+    document.getElementById('transactionDetailsModal').classList.remove('hidden');
+}
+
+function hideTransactionDetails() {
+    document.getElementById('transactionDetailsModal').classList.add('hidden');
+}
+
+async function exportTransactions() {
+    try {
+        showLoading();
+        
+        // For now, create a simple CSV export
+        const csvData = transactionsData.map(transaction => [
+            formatDateTime(transaction.created_at),
+            transaction.tags_id || '',
+            transaction.products?.sku || '',
+            transaction.products?.product_name || '',
+            transaction.transaction_types?.main_type || '',
+            transaction.transaction_types?.sub_type || '',
+            transaction.packs || 0,
+            transaction.pieces || 0,
+            transaction.weight || 0,
+            transaction.status || '',
+            transaction.created_by_name || ''
+        ]);
+        
+        const headers = [
+            'วันที่/เวลา', 'Tags ID', 'SKU', 'ชื่อสินค้า', 'ประเภทหลัก', 'ประเภทย่อย',
+            'จำนวนแพ็ค', 'จำนวนชิ้น', 'น้ำหนัก', 'สถานะ', 'ผู้ดำเนินการ'
+        ];
+        
+        const csvContent = [headers, ...csvData]
+            .map(row => row.map(cell => `"${cell}"`).join(','))
+            .join('\n');
+        
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `transactions_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        
+        showMessage('ส่งออกข้อมูลเรียบร้อยแล้ว', 'success');
+        
+    } catch (error) {
+        console.error('Error exporting transactions:', error);
+        showMessage('เกิดข้อผิดพลาดในการส่งออกข้อมูล', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Utility functions
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+}
+</script>
