@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ - Austam Good WMS</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255,255,255,0.95);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .thai-font {
+            font-family: 'Sarabun', 'Kanit', sans-serif;
+        }
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        .loading {
+            display: none;
+        }
+        .loading.show {
+            display: inline-block;
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center thai-font">
+    <!-- Background Elements -->
+    <div class="absolute inset-0 overflow-hidden">
+        <div class="absolute -top-40 -right-40 w-80 h-80 bg-white opacity-10 rounded-full animate-float"></div>
+        <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-white opacity-5 rounded-full animate-float" style="animation-delay: -3s;"></div>
+        <div class="absolute top-1/3 right-1/4 w-32 h-32 bg-white opacity-10 rounded-full animate-float" style="animation-delay: -1s;"></div>
+    </div>
+
+    <!-- Login Container -->
+    <div class="relative z-10 w-full max-w-md">
+        <!-- Logo and Title -->
+        <div class="text-center mb-8">
+            <div class="mx-auto w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg mb-4">
+                <i class="fas fa-warehouse text-3xl text-blue-600"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2">Austam Good WMS</h1>
+            <p class="text-blue-100">ระบบจัดการคลังสินค้า</p>
+        </div>
+
+        <!-- Login Form -->
+        <div class="glass-effect rounded-xl shadow-2xl p-8">
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user mr-2"></i>รหัสผู้ใช้
+                    </label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        required 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        placeholder="กรอกรหัสผู้ใช้"
+                        autocomplete="username"
+                    >
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-lock mr-2"></i>รหัสผ่าน
+                    </label>
+                    <div class="relative">
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            required 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 pr-12"
+                            placeholder="กรอกรหัสผ่าน"
+                            autocomplete="current-password"
+                        >
+                        <button 
+                            type="button" 
+                            id="togglePassword" 
+                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="rememberMe" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <span class="ml-2 text-sm text-gray-600">จดจำการเข้าสู่ระบบ</span>
+                    </label>
+                </div>
+
+                <button 
+                    type="submit" 
+                    id="loginButton"
+                    class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition-all duration-200 font-medium flex items-center justify-center"
+                >
+                    <span id="loginText">เข้าสู่ระบบ</span>
+                    <div id="loginLoading" class="loading ml-2">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </div>
+                </button>
+            </form>
+
+            <!-- Error Message -->
+            <div id="errorMessage" class="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg hidden">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-circle mr-2"></i>
+                    <span id="errorText"></span>
+                </div>
+            </div>
+
+            <!-- Success Message -->
+            <div id="successMessage" class="mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg hidden">
+                <div class="flex items-center">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    <span>เข้าสู่ระบบสำเร็จ กำลังเปลี่ยนหน้า...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Info -->
+        <div class="text-center mt-8 text-blue-100 text-sm">
+            <p>© 2024 Austam Good WMS. สงวนลิขสิทธิ์.</p>
+            <p class="mt-2">ติดต่อสนับสนุน: support@austamgood.com</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeLogin();
+        });
+
+        function initializeLogin() {
+            // Setup event listeners
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            document.getElementById('togglePassword').addEventListener('click', togglePasswordVisibility);
+            
+            // Focus on username field
+            document.getElementById('username').focus();
+            
+            // Check for remembered credentials
+            checkRememberedCredentials();
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+            
+            // Validation
+            if (!username || !password) {
+                showError('กรุณากรอกรหัสผู้ใช้และรหัสผ่าน');
+                return;
+            }
+            
+            // Show loading state
+            setLoginLoading(true);
+            hideMessages();
+            
+            // Call Google Apps Script login function
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    setLoginLoading(false);
+                    
+                    if (response.success) {
+                        // Save credentials if remember me is checked
+                        if (rememberMe) {
+                            localStorage.setItem('rememberedUsername', username);
+                        } else {
+                            localStorage.removeItem('rememberedUsername');
+                        }
+                        
+                        showSuccess();
+                        
+                        // Redirect after short delay
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showError(response.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    setLoginLoading(false);
+                    console.error('Login error:', error);
+                    showError('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
+                })
+                .loginUser({
+                    username: username,
+                    password: password
+                });
+        }
+
+        function togglePasswordVisibility() {
+            const passwordField = document.getElementById('password');
+            const toggleButton = document.getElementById('togglePassword');
+            const icon = toggleButton.querySelector('i');
+            
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordField.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        function setLoginLoading(isLoading) {
+            const button = document.getElementById('loginButton');
+            const text = document.getElementById('loginText');
+            const loading = document.getElementById('loginLoading');
+            
+            if (isLoading) {
+                button.disabled = true;
+                button.classList.add('opacity-75', 'cursor-not-allowed');
+                text.textContent = 'กำลังเข้าสู่ระบบ...';
+                loading.classList.add('show');
+            } else {
+                button.disabled = false;
+                button.classList.remove('opacity-75', 'cursor-not-allowed');
+                text.textContent = 'เข้าสู่ระบบ';
+                loading.classList.remove('show');
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            
+            errorText.textContent = message;
+            errorDiv.classList.remove('hidden');
+            
+            // Auto hide after 5 seconds
+            setTimeout(function() {
+                errorDiv.classList.add('hidden');
+            }, 5000);
+        }
+
+        function showSuccess() {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.classList.remove('hidden');
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMessage').classList.add('hidden');
+            document.getElementById('successMessage').classList.add('hidden');
+        }
+
+        function checkRememberedCredentials() {
+            const rememberedUsername = localStorage.getItem('rememberedUsername');
+            if (rememberedUsername) {
+                document.getElementById('username').value = rememberedUsername;
+                document.getElementById('rememberMe').checked = true;
+                document.getElementById('password').focus();
+            }
+        }
+
+        // Enter key handling
+        document.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter' && !document.getElementById('loginButton').disabled) {
+                document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // Demo credentials (remove in production)
+        function fillDemoCredentials() {
+            document.getElementById('username').value = 'WH001';
+            document.getElementById('password').value = '191';
+        }
+
+        // Add demo button for testing (remove in production)
+        setTimeout(function() {
+            const demoButton = document.createElement('button');
+            demoButton.type = 'button';
+            demoButton.className = 'mt-4 w-full bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors text-sm';
+            demoButton.textContent = 'ใช้ข้อมูลทดสอบ (Demo)';
+            demoButton.onclick = fillDemoCredentials;
+            
+            const form = document.getElementById('loginForm');
+            form.appendChild(demoButton);
+        }, 1000);
+    </script>
+</body>
+</html>
