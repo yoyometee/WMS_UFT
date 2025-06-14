@@ -1,0 +1,948 @@
+<!-- Location Management Content -->
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">จัดการที่เก็บสินค้า</h1>
+            <p class="text-gray-600 mt-1">ตรวจสอบและจัดการตำแหน่งเก็บสินค้าในคลัง</p>
+        </div>
+        <div class="flex space-x-4">
+            <button onclick="addNewLocation()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center">
+                <i class="fas fa-plus mr-2"></i>เพิ่มตำแหน่งใหม่
+            </button>
+            <button onclick="exportLocationData()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+                <i class="fas fa-download mr-2"></i>ส่งออกข้อมูล
+            </button>
+        </div>
+    </div>
+
+    <!-- Location Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">ตำแหน่งทั้งหมด</p>
+                    <p id="totalLocations" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <i class="fas fa-map-marker-alt text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">ตำแหน่งว่าง</p>
+                    <p id="availableLocations" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">ตำแหน่งไม่ว่าง</p>
+                    <p id="occupiedLocations" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-red-100 rounded-full p-3">
+                    <i class="fas fa-times-circle text-red-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">อัตราการใช้งาน</p>
+                    <p id="utilizationRate" class="text-2xl font-bold text-gray-900">-%</p>
+                </div>
+                <div class="bg-orange-100 rounded-full p-3">
+                    <i class="fas fa-chart-pie text-orange-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zone Filters -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-4">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">ตัวกรองและการค้นหา</h3>
+                <p class="text-sm text-gray-600">เลือกโซนหรือค้นหาตำแหน่งที่ต้องการ</p>
+            </div>
+            
+            <div class="flex flex-wrap gap-4">
+                <!-- Zone Filter -->
+                <select id="zoneFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="filterLocations()">
+                    <option value="">ทุกโซน</option>
+                    <option value="Selective Rack">Selective Rack</option>
+                    <option value="Pick Face">Pick Face</option>
+                    <option value="Premium">Premium</option>
+                    <option value="Receiving">Receiving</option>
+                    <option value="Dispatch">Dispatch</option>
+                    <option value="Production">Production</option>
+                </select>
+
+                <!-- Status Filter -->
+                <select id="statusFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="filterLocations()">
+                    <option value="">ทุกสถานะ</option>
+                    <option value="ว่าง">ว่าง</option>
+                    <option value="ไม่ว่าง">ไม่ว่าง</option>
+                    <option value="ปิดใช้งาน">ปิดใช้งาน</option>
+                </select>
+
+                <!-- Search -->
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        id="locationSearch" 
+                        placeholder="ค้นหาตำแหน่ง..." 
+                        class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        onkeyup="filterLocations()"
+                    >
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+
+                <button onclick="refreshLocations()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-sync-alt mr-1"></i>รีเฟรช
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zone Overview -->
+    <div class="bg-white rounded-xl shadow-lg">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-900">ภาพรวมตามโซน</h2>
+            <p class="text-gray-600 text-sm mt-1">สถานะการใช้งานแยกตามโซน</p>
+        </div>
+
+        <div id="zoneOverview" class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Zone cards will be loaded here -->
+                <div class="text-center py-8 text-gray-500 col-span-full">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-4"></i>
+                    <p>กำลังโหลดข้อมูลโซน...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Location Grid/List View -->
+    <div class="bg-white rounded-xl shadow-lg">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-900">รายการตำแหน่งเก็บ</h2>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600">
+                        แสดง <span id="locationCount">0</span> ตำแหน่ง
+                    </span>
+                    <div class="flex rounded-lg overflow-hidden border border-gray-300">
+                        <button id="gridViewBtn" onclick="setViewMode('grid')" class="px-3 py-1 bg-blue-500 text-white text-sm">
+                            <i class="fas fa-th-large"></i>
+                        </button>
+                        <button id="listViewBtn" onclick="setViewMode('list')" class="px-3 py-1 bg-gray-200 text-gray-700 text-sm">
+                            <i class="fas fa-list"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid View -->
+        <div id="gridView" class="p-6">
+            <div id="locationsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <!-- Location cards will be loaded here -->
+                <div class="col-span-full text-center py-8 text-gray-500">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-4"></i>
+                    <p>กำลังโหลดข้อมูลตำแหน่ง...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- List View (Hidden by default) -->
+        <div id="listView" class="hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ตำแหน่ง</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">โซน</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">แถว/ชั้น</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ความจุ</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สินค้าปัจจุบัน</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">อัพเดทล่าสุด</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">การจัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="locationsTableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Table rows will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Location Detail Modal -->
+<div id="locationDetailModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center">
+    <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-screen overflow-y-auto">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-900">รายละเอียดตำแหน่งเก็บ</h3>
+                <button onclick="closeLocationDetailModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="locationDetailContent" class="p-6">
+            <!-- Content will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Location Modal -->
+<div id="locationFormModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center">
+    <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h3 id="locationFormTitle" class="text-xl font-bold text-gray-900">เพิ่มตำแหน่งใหม่</h3>
+                <button onclick="closeLocationFormModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <form id="locationForm" class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Basic Information -->
+                <div class="space-y-4">
+                    <h4 class="font-semibold text-gray-900 border-b pb-2">ข้อมูลพื้นฐาน</h4>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">รหัสตำแหน่ง *</label>
+                        <input 
+                            type="text" 
+                            id="locationId" 
+                            name="location_id" 
+                            required 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="เช่น A01-01-001"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">โซน *</label>
+                        <select 
+                            id="locationZone" 
+                            name="zone" 
+                            required 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                            <option value="">เลือกโซน</option>
+                            <option value="Selective Rack">Selective Rack</option>
+                            <option value="Pick Face">Pick Face</option>
+                            <option value="Premium">Premium</option>
+                            <option value="Receiving">Receiving</option>
+                            <option value="Dispatch">Dispatch</option>
+                            <option value="Production">Production</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">แถว</label>
+                            <input 
+                                type="text" 
+                                id="locationRow" 
+                                name="row_code" 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="เช่น A01"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ชั้น</label>
+                            <input 
+                                type="number" 
+                                id="locationLevel" 
+                                name="level" 
+                                min="1"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="1"
+                            >
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ตำแหน่ง</label>
+                        <input 
+                            type="number" 
+                            id="locationPosition" 
+                            name="position" 
+                            min="1"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="1"
+                        >
+                    </div>
+                </div>
+
+                <!-- Capacity Information -->
+                <div class="space-y-4">
+                    <h4 class="font-semibold text-gray-900 border-b pb-2">ข้อมูลความจุ</h4>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">น้ำหนักสูงสุด (กก.)</label>
+                        <input 
+                            type="number" 
+                            id="maxWeight" 
+                            name="max_weight" 
+                            step="0.1"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="1000"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">จำนวนพาเลทสูงสุด</label>
+                        <input 
+                            type="number" 
+                            id="maxPallets" 
+                            name="max_pallets" 
+                            min="1"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="1"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ความสูงสูงสุด (มม.)</label>
+                        <input 
+                            type="number" 
+                            id="maxHeight" 
+                            name="max_height" 
+                            step="1"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="1800"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">สถานะ</label>
+                        <select 
+                            id="locationStatus" 
+                            name="status" 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                            <option value="ว่าง">ว่าง</option>
+                            <option value="ไม่ว่าง">ไม่ว่าง</option>
+                            <option value="ปิดใช้งาน">ปิดใช้งาน</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="mt-8 flex justify-end space-x-4">
+                <button 
+                    type="button" 
+                    onclick="closeLocationFormModal()" 
+                    class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                    ยกเลิก
+                </button>
+                <button 
+                    type="submit" 
+                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                >
+                    <span id="locationFormSubmitText">บันทึก</span>
+                    <i id="locationFormSpinner" class="fas fa-spinner fa-spin ml-2 hidden"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.location-card {
+    transition: all 0.2s ease;
+}
+
+.location-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.location-card.available {
+    border-left-color: #10B981;
+}
+
+.location-card.occupied {
+    border-left-color: #EF4444;
+}
+
+.location-card.disabled {
+    border-left-color: #6B7280;
+}
+
+.zone-card {
+    transition: all 0.2s ease;
+}
+
+.zone-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+</style>
+
+<script id="locations-script">
+let currentViewMode = 'grid';
+let allLocations = [];
+let filteredLocations = [];
+
+function loadLocations() {
+    document.getElementById('mainContent').innerHTML = `<?= include('locations'); ?>`;
+    
+    // Initialize locations page
+    initializeLocationsPage();
+}
+
+function initializeLocationsPage() {
+    // Load initial data
+    loadLocationStats();
+    loadZoneOverview();
+    loadAllLocations();
+    
+    // Set default view mode
+    setViewMode('grid');
+}
+
+function loadLocationStats() {
+    googleScriptCall('getWarehouseLocations')
+        .then(response => {
+            if (response.success) {
+                const locations = response.data || [];
+                calculateLocationStats(locations);
+            } else {
+                console.error('Failed to load location stats:', response.message);
+                displayStatsError();
+            }
+        })
+        .catch(error => {
+            console.error('Location stats loading error:', error);
+            displayStatsError();
+        });
+}
+
+function calculateLocationStats(locations) {
+    const total = locations.length;
+    const available = locations.filter(loc => loc.status === 'ว่าง').length;
+    const occupied = locations.filter(loc => loc.status === 'ไม่ว่าง').length;
+    const utilizationRate = total > 0 ? Math.round((occupied / total) * 100) : 0;
+    
+    document.getElementById('totalLocations').textContent = total.toLocaleString();
+    document.getElementById('availableLocations').textContent = available.toLocaleString();
+    document.getElementById('occupiedLocations').textContent = occupied.toLocaleString();
+    document.getElementById('utilizationRate').textContent = utilizationRate;
+}
+
+function displayStatsError() {
+    document.getElementById('totalLocations').textContent = 'Error';
+    document.getElementById('availableLocations').textContent = 'Error';
+    document.getElementById('occupiedLocations').textContent = 'Error';
+    document.getElementById('utilizationRate').textContent = 'Error';
+}
+
+function loadZoneOverview() {
+    // For now, create sample zone data
+    // In production, this would aggregate actual location data by zone
+    const zones = [
+        { name: 'Selective Rack', total: 12, occupied: 8, available: 4 },
+        { name: 'Pick Face', total: 2, occupied: 1, available: 1 },
+        { name: 'Premium', total: 1, occupied: 0, available: 1 },
+        { name: 'Receiving', total: 1, occupied: 0, available: 1 },
+        { name: 'Dispatch', total: 1, occupied: 0, available: 1 },
+        { name: 'Production', total: 1, occupied: 0, available: 1 }
+    ];
+    
+    displayZoneOverview(zones);
+}
+
+function displayZoneOverview(zones) {
+    const container = document.getElementById('zoneOverview');
+    
+    const zoneCards = zones.map(zone => {
+        const utilizationRate = zone.total > 0 ? Math.round((zone.occupied / zone.total) * 100) : 0;
+        let statusColor = 'text-green-600';
+        if (utilizationRate > 80) statusColor = 'text-red-600';
+        else if (utilizationRate > 60) statusColor = 'text-orange-600';
+        
+        return `
+            <div class="zone-card bg-white border border-gray-200 rounded-lg p-6 cursor-pointer" onclick="filterByZone('${zone.name}')">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-gray-900">${zone.name}</h3>
+                    <div class="text-2xl ${statusColor}">
+                        ${utilizationRate}%
+                    </div>
+                </div>
+                
+                <div class="space-y-3">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">ทั้งหมด:</span>
+                        <span class="font-medium">${zone.total} ตำแหน่ง</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">ใช้งาน:</span>
+                        <span class="font-medium text-red-600">${zone.occupied} ตำแหน่ง</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">ว่าง:</span>
+                        <span class="font-medium text-green-600">${zone.available} ตำแหน่ง</span>
+                    </div>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="mt-4">
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="h-2 rounded-full ${utilizationRate > 80 ? 'bg-red-500' : utilizationRate > 60 ? 'bg-orange-500' : 'bg-green-500'}" 
+                             style="width: ${utilizationRate}%"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">${zoneCards}</div>`;
+}
+
+function loadAllLocations() {
+    googleScriptCall('getWarehouseLocations')
+        .then(response => {
+            if (response.success) {
+                allLocations = response.data || [];
+                filteredLocations = [...allLocations];
+                displayLocations();
+            } else {
+                console.error('Failed to load locations:', response.message);
+                displayLocationsError();
+            }
+        })
+        .catch(error => {
+            console.error('Locations loading error:', error);
+            displayLocationsError();
+        });
+}
+
+function filterLocations() {
+    const zoneFilter = document.getElementById('zoneFilter').value;
+    const statusFilter = document.getElementById('statusFilter').value;
+    const searchTerm = document.getElementById('locationSearch').value.toLowerCase();
+    
+    filteredLocations = allLocations.filter(location => {
+        const matchesZone = !zoneFilter || location.zone_name === zoneFilter;
+        const matchesStatus = !statusFilter || location.status === statusFilter;
+        const matchesSearch = !searchTerm || 
+            location.location_code.toLowerCase().includes(searchTerm) ||
+            (location.sku && location.sku.toLowerCase().includes(searchTerm)) ||
+            (location.product_name && location.product_name.toLowerCase().includes(searchTerm));
+        
+        return matchesZone && matchesStatus && matchesSearch;
+    });
+    
+    displayLocations();
+}
+
+function filterByZone(zoneName) {
+    document.getElementById('zoneFilter').value = zoneName;
+    filterLocations();
+}
+
+function displayLocations() {
+    document.getElementById('locationCount').textContent = filteredLocations.length.toLocaleString();
+    
+    if (currentViewMode === 'grid') {
+        displayGridView();
+    } else {
+        displayListView();
+    }
+}
+
+function displayGridView() {
+    const container = document.getElementById('locationsGrid');
+    
+    if (!filteredLocations || filteredLocations.length === 0) {
+        container.innerHTML = `
+            <div class="col-span-full text-center py-12 text-gray-500">
+                <i class="fas fa-search text-4xl mb-4"></i>
+                <p class="text-lg">ไม่พบตำแหน่งที่ตรงกับเงื่อนไข</p>
+                <button onclick="clearFilters()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    ล้างตัวกรอง
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    const locationCards = filteredLocations.map(location => {
+        const isOccupied = location.current_pieces > 0;
+        const statusClass = isOccupied ? 'occupied' : 
+                           location.status === 'ปิดใช้งาน' ? 'disabled' : 'available';
+        const statusColor = isOccupied ? 'text-red-600' : 
+                           location.status === 'ปิดใช้งาน' ? 'text-gray-600' : 'text-green-600';
+        const statusBg = isOccupied ? 'bg-red-100' : 
+                        location.status === 'ปิดใช้งาน' ? 'bg-gray-100' : 'bg-green-100';
+        
+        return `
+            <div class="location-card ${statusClass} bg-white border-l-4 border border-gray-200 rounded-lg p-4 cursor-pointer" 
+                 onclick="viewLocationDetail('${location.location_code}')">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <h4 class="font-semibold text-gray-900">${location.location_code}</h4>
+                        <p class="text-sm text-gray-600">${location.zone_name || 'Unknown Zone'}</p>
+                    </div>
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusBg} ${statusColor}">
+                        ${isOccupied ? 'ไม่ว่าง' : location.status || 'ว่าง'}
+                    </span>
+                </div>
+                
+                ${isOccupied && location.sku ? `
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">SKU:</span>
+                            <span class="font-medium">${location.sku}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">จำนวน:</span>
+                            <span class="font-medium">${(location.current_pieces || 0).toLocaleString()} ชิ้น</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">น้ำหนัก:</span>
+                            <span class="font-medium">${(location.current_weight || 0).toLocaleString()} กก.</span>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="text-center py-4 text-gray-400">
+                        <i class="fas fa-inbox text-2xl mb-2"></i>
+                        <p class="text-sm">พื้นที่ว่าง</p>
+                    </div>
+                `}
+                
+                <div class="mt-4 flex justify-between items-center text-xs text-gray-500">
+                    <span>${location.last_transaction ? new Date(location.last_transaction).toLocaleDateString('th-TH') : 'ไม่มีข้อมูล'}</span>
+                    <button onclick="event.stopPropagation(); editLocation('${location.location_code}')" 
+                            class="text-blue-600 hover:text-blue-800">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = locationCards;
+}
+
+function displayListView() {
+    const tbody = document.getElementById('locationsTableBody');
+    
+    if (!filteredLocations || filteredLocations.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                    <i class="fas fa-search text-4xl mb-4"></i>
+                    <p class="text-lg">ไม่พบตำแหน่งที่ตรงกับเงื่อนไข</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    const rows = filteredLocations.map(location => {
+        const isOccupied = location.current_pieces > 0;
+        const statusColor = isOccupied ? 'bg-red-100 text-red-800' : 
+                           location.status === 'ปิดใช้งาน' ? 'bg-gray-100 text-gray-800' : 'bg-green-100 text-green-800';
+        const lastUpdated = location.last_transaction ? new Date(location.last_transaction).toLocaleDateString('th-TH') : 'ไม่มีข้อมูล';
+        
+        return `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${location.location_code}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${location.zone_name || 'Unknown'}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${location.row_code || 'N/A'} / ${location.level || 'N/A'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${location.max_weight || 'N/A'} กก. / ${location.max_pallets || 1} พาเลท
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusColor}">
+                        ${isOccupied ? 'ไม่ว่าง' : location.status || 'ว่าง'}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${isOccupied && location.sku ? 
+                        `${location.sku}<br><small class="text-gray-500">${(location.current_pieces || 0).toLocaleString()} ชิ้น</small>` : 
+                        '<span class="text-gray-400">ว่าง</span>'
+                    }
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${lastUpdated}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button 
+                        onclick="viewLocationDetail('${location.location_code}')" 
+                        class="text-blue-600 hover:text-blue-900 transition-colors"
+                        title="ดูรายละเอียด"
+                    >
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button 
+                        onclick="editLocation('${location.location_code}')" 
+                        class="text-green-600 hover:text-green-900 transition-colors"
+                        title="แก้ไข"
+                    >
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button 
+                        onclick="deleteLocation('${location.location_code}')" 
+                        class="text-red-600 hover:text-red-900 transition-colors"
+                        title="ลบ"
+                    >
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    tbody.innerHTML = rows;
+}
+
+function displayLocationsError() {
+    const container = document.getElementById('locationsGrid');
+    container.innerHTML = `
+        <div class="col-span-full text-center py-12 text-red-500">
+            <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+            <p class="text-lg">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+            <button onclick="loadAllLocations()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                ลองใหม่
+            </button>
+        </div>
+    `;
+}
+
+function setViewMode(mode) {
+    currentViewMode = mode;
+    
+    // Update button states
+    document.getElementById('gridViewBtn').className = mode === 'grid' ? 
+        'px-3 py-1 bg-blue-500 text-white text-sm' : 
+        'px-3 py-1 bg-gray-200 text-gray-700 text-sm';
+    
+    document.getElementById('listViewBtn').className = mode === 'list' ? 
+        'px-3 py-1 bg-blue-500 text-white text-sm' : 
+        'px-3 py-1 bg-gray-200 text-gray-700 text-sm';
+    
+    // Show/hide views
+    document.getElementById('gridView').classList.toggle('hidden', mode !== 'grid');
+    document.getElementById('listView').classList.toggle('hidden', mode !== 'list');
+    
+    // Display data in selected mode
+    displayLocations();
+}
+
+function clearFilters() {
+    document.getElementById('zoneFilter').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('locationSearch').value = '';
+    filterLocations();
+}
+
+function refreshLocations() {
+    loadLocationStats();
+    loadZoneOverview();
+    loadAllLocations();
+    showMessage('รีเฟรชข้อมูลตำแหน่งเรียบร้อยแล้ว', 'success');
+}
+
+function viewLocationDetail(locationCode) {
+    const location = allLocations.find(loc => loc.location_code === locationCode);
+    if (!location) {
+        showMessage('ไม่พบข้อมูลตำแหน่งที่ต้องการดู', 'error');
+        return;
+    }
+    
+    const detailContent = document.getElementById('locationDetailContent');
+    const isOccupied = location.current_pieces > 0;
+    
+    const detailHTML = `
+        <div class="space-y-6">
+            <!-- Basic Information -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <h4 class="text-lg font-semibold text-gray-900 border-b pb-2">ข้อมูลพื้นฐาน</h4>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">รหัสตำแหน่ง:</span>
+                            <span class="font-medium">${location.location_code}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">โซน:</span>
+                            <span class="font-medium">${location.zone_name || 'Unknown'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">แถว:</span>
+                            <span class="font-medium">${location.row_code || 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">ชั้น:</span>
+                            <span class="font-medium">${location.level || 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">สถานะ:</span>
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${isOccupied ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
+                                ${isOccupied ? 'ไม่ว่าง' : location.status || 'ว่าง'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <h4 class="text-lg font-semibold text-gray-900 border-b pb-2">ข้อมูลความจุ</h4>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">น้ำหนักสูงสุด:</span>
+                            <span class="font-medium">${location.max_weight || 'N/A'} กก.</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">พาเลทสูงสุด:</span>
+                            <span class="font-medium">${location.max_pallets || 1} พาเลท</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">ความสูงสูงสุด:</span>
+                            <span class="font-medium">${location.max_height || 'N/A'} มม.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            ${isOccupied ? `
+                <!-- Current Stock -->
+                <div class="bg-blue-50 rounded-lg p-6">
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">สินค้าปัจจุบัน</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">SKU:</span>
+                                <span class="font-medium">${location.sku || 'N/A'}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">ชื่อสินค้า:</span>
+                                <span class="font-medium">${location.product_name || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">จำนวน:</span>
+                                <span class="font-medium">${(location.current_pieces || 0).toLocaleString()} ชิ้น</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">น้ำหนัก:</span>
+                                <span class="font-medium">${(location.current_weight || 0).toLocaleString()} กก.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ` : `
+                <!-- Empty Status -->
+                <div class="bg-green-50 rounded-lg p-6 text-center">
+                    <i class="fas fa-check-circle text-green-600 text-4xl mb-4"></i>
+                    <h4 class="text-lg font-semibold text-green-900">ตำแหน่งว่าง</h4>
+                    <p class="text-green-700">พร้อมรับสินค้าได้</p>
+                </div>
+            `}
+            
+            <!-- Action Buttons -->
+            <div class="flex justify-end space-x-4">
+                <button onclick="editLocation('${location.location_code}')" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-edit mr-2"></i>แก้ไข
+                </button>
+                ${!isOccupied ? `
+                    <button onclick="deleteLocation('${location.location_code}')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                        <i class="fas fa-trash mr-2"></i>ลบ
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+    
+    detailContent.innerHTML = detailHTML;
+    document.getElementById('locationDetailModal').classList.remove('hidden');
+}
+
+function closeLocationDetailModal() {
+    document.getElementById('locationDetailModal').classList.add('hidden');
+}
+
+function addNewLocation() {
+    document.getElementById('locationFormTitle').textContent = 'เพิ่มตำแหน่งใหม่';
+    document.getElementById('locationForm').reset();
+    document.getElementById('locationFormModal').classList.remove('hidden');
+}
+
+function editLocation(locationCode) {
+    const location = allLocations.find(loc => loc.location_code === locationCode);
+    if (!location) {
+        showMessage('ไม่พบข้อมูลตำแหน่งที่ต้องการแก้ไข', 'error');
+        return;
+    }
+    
+    document.getElementById('locationFormTitle').textContent = 'แก้ไขตำแหน่ง';
+    
+    // Fill form with existing data
+    document.getElementById('locationId').value = location.location_code;
+    document.getElementById('locationZone').value = location.zone_name || '';
+    document.getElementById('locationRow').value = location.row_code || '';
+    document.getElementById('locationLevel').value = location.level || '';
+    document.getElementById('locationPosition').value = location.position || '';
+    document.getElementById('maxWeight').value = location.max_weight || '';
+    document.getElementById('maxPallets').value = location.max_pallets || 1;
+    document.getElementById('maxHeight').value = location.max_height || '';
+    document.getElementById('locationStatus').value = location.status || 'ว่าง';
+    
+    // Disable location ID for editing
+    document.getElementById('locationId').disabled = true;
+    
+    document.getElementById('locationFormModal').classList.remove('hidden');
+}
+
+function closeLocationFormModal() {
+    document.getElementById('locationFormModal').classList.add('hidden');
+    document.getElementById('locationId').disabled = false;
+}
+
+function deleteLocation(locationCode) {
+    showConfirmModal(
+        `คุณแน่ใจหรือไม่ที่จะลบตำแหน่ง ${locationCode}?\n\nการดำเนินการนี้ไม่สามารถย้อนกลับได้`,
+        function() {
+            // Implement delete functionality
+            showMessage('ฟังก์ชันลบตำแหน่งยังไม่ได้ implement', 'error');
+        }
+    );
+}
+
+function exportLocationData() {
+    showMessage('กำลังเตรียมไฟล์ส่งออก...', 'success');
+    
+    setTimeout(() => {
+        showMessage('ฟังก์ชันส่งออกข้อมูลยังไม่ได้ implement', 'error');
+    }, 1000);
+}
+</script>
