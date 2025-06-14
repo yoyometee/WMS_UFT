@@ -1,0 +1,996 @@
+<!-- Picking Operations Content -->
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">เบิกสินค้า</h1>
+            <p class="text-gray-600 mt-1">จัดเตรียมสินค้าสำหรับการจัดส่ง</p>
+        </div>
+        <div class="flex space-x-4">
+            <button onclick="scanMode()" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center">
+                <i class="fas fa-qrcode mr-2"></i>โหมดสแกน
+            </button>
+            <button onclick="batchPicking()" class="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors flex items-center">
+                <i class="fas fa-list mr-2"></i>เบิกหลายรายการ
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">เบิกวันนี้</p>
+                    <p id="todayPickingCount" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <i class="fas fa-dolly text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">รอเบิก</p>
+                    <p id="pendingOrders" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <i class="fas fa-clock text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">เร่งด่วน</p>
+                    <p id="urgentOrders" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-orange-100 rounded-full p-3">
+                    <i class="fas fa-exclamation-triangle text-orange-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">รอจัดส่ง</p>
+                    <p id="readyToShip" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-purple-100 rounded-full p-3">
+                    <i class="fas fa-truck text-purple-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Picking Mode Selection -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">เลือกประเภทการเบิก</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button onclick="setPickingMode('single')" class="picking-mode-btn p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left active" data-mode="single">
+                <div class="flex items-center justify-between mb-3">
+                    <i class="fas fa-box text-2xl text-blue-600"></i>
+                    <div class="w-4 h-4 border-2 border-gray-300 rounded-full mode-indicator"></div>
+                </div>
+                <h4 class="font-semibold text-gray-900">เบิกรายการเดียว</h4>
+                <p class="text-sm text-gray-600 mt-1">เบิกสินค้ารายการเดียวตามความต้องการ</p>
+            </button>
+
+            <button onclick="setPickingMode('order')" class="picking-mode-btn p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left" data-mode="order">
+                <div class="flex items-center justify-between mb-3">
+                    <i class="fas fa-file-alt text-2xl text-green-600"></i>
+                    <div class="w-4 h-4 border-2 border-gray-300 rounded-full mode-indicator"></div>
+                </div>
+                <h4 class="font-semibold text-gray-900">เบิกตามใบสั่ง</h4>
+                <p class="text-sm text-gray-600 mt-1">เบิกสินค้าตามใบสั่งงาน/เลขที่ออเดอร์</p>
+            </button>
+
+            <button onclick="setPickingMode('batch')" class="picking-mode-btn p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left" data-mode="batch">
+                <div class="flex items-center justify-between mb-3">
+                    <i class="fas fa-layer-group text-2xl text-purple-600"></i>
+                    <div class="w-4 h-4 border-2 border-gray-300 rounded-full mode-indicator"></div>
+                </div>
+                <h4 class="font-semibold text-gray-900">เบิกแบบกลุ่ม</h4>
+                <p class="text-sm text-gray-600 mt-1">เบิกหลายรายการพร้อมกัน</p>
+            </button>
+        </div>
+    </div>
+
+    <!-- Single Item Picking -->
+    <div id="singlePickingForm" class="picking-form bg-white rounded-xl shadow-lg">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-900">เบิกสินค้ารายการเดียว</h2>
+            <p class="text-gray-600 text-sm mt-1">เบิกสินค้าออกจากคลังเพื่อใช้งานหรือจัดส่ง</p>
+        </div>
+
+        <form id="singlePickForm" class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Left Column: Product Information -->
+                <div class="space-y-6">
+                    <h3 class="text-lg font-semibold text-gray-900 border-b pb-2">ข้อมูลสินค้า</h3>
+                    
+                    <!-- Product Search -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ค้นหาสินค้า *</label>
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                id="pickProductSearch" 
+                                placeholder="พิมพ์ SKU หรือชื่อสินค้า..." 
+                                class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                autocomplete="off"
+                            >
+                            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                        <div id="pickProductResults" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto">
+                            <!-- Search results will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Selected Product Info -->
+                    <div id="pickSelectedProductInfo" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-semibold text-blue-900" id="pickSelectedProductName">-</h4>
+                                <p class="text-sm text-blue-700" id="pickSelectedProductSKU">-</p>
+                                <p class="text-sm text-blue-600" id="pickSelectedProductStock">สต๊อกคงเหลือ: - ชิ้น</p>
+                            </div>
+                            <button type="button" onclick="clearPickSelectedProduct()" class="text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Available Stock Locations -->
+                    <div id="stockLocationsContainer" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">เลือกตำแหน่งเบิก</label>
+                        <div id="stockLocationsList" class="space-y-2 max-h-40 overflow-y-auto">
+                            <!-- Stock locations will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Quantity to Pick -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">จำนวนที่เบิก (ชิ้น) *</label>
+                            <input 
+                                type="number" 
+                                id="pickPieces" 
+                                min="1" 
+                                step="1"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="0"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">จำนวน (แพ็ค)</label>
+                            <input 
+                                type="number" 
+                                id="pickPacks" 
+                                min="0" 
+                                step="1"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="0"
+                                readonly
+                            >
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">น้ำหนักรวม (กก.)</label>
+                        <input 
+                            type="number" 
+                            id="pickWeight" 
+                            step="0.001"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+                            placeholder="0.000"
+                            readonly
+                        >
+                    </div>
+                </div>
+
+                <!-- Right Column: Order Information -->
+                <div class="space-y-6">
+                    <h3 class="text-lg font-semibold text-gray-900 border-b pb-2">ข้อมูลการเบิก</h3>
+                    
+                    <!-- Picking Type -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ประเภทการเบิก *</label>
+                        <select 
+                            id="pickingType"
+                            required
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                            <option value="">เลือกประเภทการเบิก</option>
+                            <option value="เบิกสินค้า">เบิกสินค้าทั่วไป</option>
+                            <option value="เหมาคัน">เหมาคันส่ง</option>
+                            <option value="เบิกทั้งพาเลท">เบิกทั้งพาเลท</option>
+                            <option value="เบิกวัตถุดิบเพื่อผลิต">เบิกวัตถุดิบเพื่อผลิต</option>
+                        </select>
+                    </div>
+
+                    <!-- Customer Information -->
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">รหัสลูกค้า</label>
+                            <input 
+                                type="text" 
+                                id="customerCode"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="รหัสลูกค้า"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อลูกค้า/ร้านค้า</label>
+                            <input 
+                                type="text" 
+                                id="customerName"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="ชื่อลูกค้าหรือร้านค้า"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Delivery Information -->
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">เลขงานจัดส่ง</label>
+                            <input 
+                                type="text" 
+                                id="deliveryJobNumber"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="หมายเลขงานจัดส่ง"
+                            >
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">คันที่</label>
+                                <input 
+                                    type="text" 
+                                    id="pickTruckNumber"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="หมายเลขคัน"
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">จุดที่</label>
+                                <input 
+                                    type="text" 
+                                    id="pickPointNumber"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="หมายเลขจุด"
+                                >
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Destination -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">จุดหมาย/พื้นที่จัดส่ง</label>
+                        <select 
+                            id="destinationLocation"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                            <option value="">เลือกจุดหมาย</option>
+                            <option value="DISP">DISP - Dispatch Zone</option>
+                            <option value="Loading">Loading - จุดขึ้นรถ</option>
+                            <option value="TEMP">TEMP - พื้นที่ชั่วคราว</option>
+                            <option value="Production">Production - ส่งไปผลิต</option>
+                        </select>
+                    </div>
+
+                    <!-- Document Number -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">เลขที่เอกสาร/ใบสั่ง</label>
+                        <input 
+                            type="text" 
+                            id="documentNumber"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="เลขที่เอกสารอ้างอิง"
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <!-- Remarks -->
+            <div class="mt-8">
+                <label class="block text-sm font-medium text-gray-700 mb-2">หมายเหตุ</label>
+                <textarea 
+                    id="pickRemark" 
+                    rows="3"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="ข้อมูลเพิ่มเติม เช่น วัตถุประสงค์การเบิก คำแนะนำพิเศษ เป็นต้น"
+                ></textarea>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="mt-8 flex justify-end space-x-4">
+                <button 
+                    type="button" 
+                    onclick="resetPickingForm()" 
+                    class="px-8 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                    ล้างฟอร์ม
+                </button>
+                <button 
+                    type="submit" 
+                    class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                >
+                    <span id="pickSubmitText">บันทึกการเบิกสินค้า</span>
+                    <i id="pickSubmitSpinner" class="fas fa-spinner fa-spin ml-2 hidden"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Order-based Picking (Hidden by default) -->
+    <div id="orderPickingForm" class="picking-form bg-white rounded-xl shadow-lg hidden">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-900">เบิกตามใบสั่ง</h2>
+            <p class="text-gray-600 text-sm mt-1">กรอกเลขที่ใบสั่งเพื่อดูรายการสินค้าที่ต้องเบิก</p>
+        </div>
+
+        <div class="p-6">
+            <div class="max-w-md">
+                <label class="block text-sm font-medium text-gray-700 mb-2">เลขที่ใบสั่ง/ออเดอร์</label>
+                <div class="flex space-x-4">
+                    <input 
+                        type="text" 
+                        id="orderNumber" 
+                        placeholder="กรอกเลขที่ใบสั่ง..." 
+                        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    >
+                    <button 
+                        type="button" 
+                        onclick="searchOrder()" 
+                        class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                        ค้นหา
+                    </button>
+                </div>
+            </div>
+
+            <!-- Order Items List -->
+            <div id="orderItemsList" class="mt-8 hidden">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">รายการสินค้าในใบสั่ง</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <input type="checkbox" id="selectAllItems" class="rounded">
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สินค้า</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">จำนวนสั่ง</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">จำนวนเบิก</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สต๊อกคงเหลือ</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderItemsTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- Order items will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-6 flex justify-end space-x-4">
+                    <button 
+                        type="button" 
+                        onclick="cancelOrderPicking()" 
+                        class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                        ยกเลิก
+                    </button>
+                    <button 
+                        type="button" 
+                        onclick="processOrderPicking()" 
+                        class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                        ดำเนินการเบิกสินค้า
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batch Picking (Hidden by default) -->
+    <div id="batchPickingForm" class="picking-form bg-white rounded-xl shadow-lg hidden">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-900">เบิกแบบกลุ่ม</h2>
+            <p class="text-gray-600 text-sm mt-1">เพิ่มสินค้าหลายรายการในครั้งเดียว</p>
+        </div>
+
+        <div class="p-6">
+            <div class="text-center py-12 text-gray-500">
+                <i class="fas fa-tools text-4xl mb-4"></i>
+                <p class="text-lg">ฟังก์ชันเบิกแบบกลุ่มกำลังพัฒนา</p>
+                <p class="text-sm">เร็ว ๆ นี้</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Picking -->
+    <div class="bg-white rounded-xl shadow-lg">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-900">การเบิกล่าสุด</h2>
+                <button onclick="loadRecentPicking()" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    <i class="fas fa-sync-alt mr-1"></i>รีเฟรช
+                </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">เวลา</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สินค้า</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">จำนวน</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ลูกค้า</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ผู้บันทึก</th>
+                    </tr>
+                </thead>
+                <tbody id="recentPickingTableBody" class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                            <i class="fas fa-spinner fa-spin text-xl mb-2"></i>
+                            <p>กำลังโหลดข้อมูล...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+.picking-mode-btn.active {
+    border-color: #3B82F6;
+    background-color: #EFF6FF;
+}
+
+.picking-mode-btn.active .mode-indicator {
+    background-color: #3B82F6;
+    border-color: #3B82F6;
+}
+
+.picking-form.hidden {
+    display: none;
+}
+
+.stock-location-item {
+    border: 2px solid #E5E7EB;
+    transition: all 0.2s;
+}
+
+.stock-location-item:hover {
+    border-color: #3B82F6;
+    background-color: #EFF6FF;
+}
+
+.stock-location-item.selected {
+    border-color: #3B82F6;
+    background-color: #EFF6FF;
+}
+</style>
+
+<script id="picking-script">
+let currentPickingMode = 'single';
+let selectedPickProduct = null;
+let selectedStockLocation = null;
+
+function loadPicking() {
+    document.getElementById('mainContent').innerHTML = `<?= include('picking'); ?>`;
+    
+    // Initialize picking page
+    initializePickingPage();
+}
+
+function initializePickingPage() {
+    // Setup event listeners
+    setupPickingEventListeners();
+    
+    // Load initial data
+    loadPickingStats();
+    loadRecentPicking();
+    
+    // Show default mode
+    setPickingMode('single');
+}
+
+function setupPickingEventListeners() {
+    // Product search for picking
+    const pickProductSearch = document.getElementById('pickProductSearch');
+    if (pickProductSearch) {
+        let searchTimeout;
+        pickProductSearch.addEventListener('input', function(event) {
+            const searchTerm = event.target.value.trim();
+            
+            if (searchTerm.length < 2) {
+                hidePickProductResults();
+                return;
+            }
+
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchProductsForPicking(searchTerm);
+            }, 300);
+        });
+
+        pickProductSearch.addEventListener('blur', function() {
+            setTimeout(() => hidePickProductResults(), 200);
+        });
+    }
+
+    // Quantity input for auto-calculation
+    const pickPiecesInput = document.getElementById('pickPieces');
+    if (pickPiecesInput) {
+        pickPiecesInput.addEventListener('input', autoCalculatePickingWeight);
+    }
+
+    // Form submission
+    const singlePickForm = document.getElementById('singlePickForm');
+    if (singlePickForm) {
+        singlePickForm.addEventListener('submit', handlePickingSubmit);
+    }
+
+    // Order number search
+    const orderNumberInput = document.getElementById('orderNumber');
+    if (orderNumberInput) {
+        orderNumberInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                searchOrder();
+            }
+        });
+    }
+}
+
+function setPickingMode(mode) {
+    currentPickingMode = mode;
+    
+    // Update mode buttons
+    document.querySelectorAll('.picking-mode-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+    
+    // Show/hide forms
+    document.querySelectorAll('.picking-form').forEach(form => {
+        form.classList.add('hidden');
+    });
+    
+    switch(mode) {
+        case 'single':
+            document.getElementById('singlePickingForm').classList.remove('hidden');
+            break;
+        case 'order':
+            document.getElementById('orderPickingForm').classList.remove('hidden');
+            break;
+        case 'batch':
+            document.getElementById('batchPickingForm').classList.remove('hidden');
+            break;
+    }
+}
+
+function searchProductsForPicking(searchTerm) {
+    googleScriptCall('searchProducts', searchTerm)
+        .then(response => {
+            if (response.success) {
+                displayPickProductResults(response.data || []);
+            } else {
+                console.error('Product search failed:', response.message);
+                hidePickProductResults();
+            }
+        })
+        .catch(error => {
+            console.error('Product search error:', error);
+            hidePickProductResults();
+        });
+}
+
+function displayPickProductResults(products) {
+    const resultsContainer = document.getElementById('pickProductResults');
+    
+    if (!products || products.length === 0) {
+        hidePickProductResults();
+        return;
+    }
+
+    const resultsHTML = products.map(product => `
+        <div class="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0" 
+             onclick="selectPickProduct('${product.sku}', '${product.product_name}', '${product.unit}', ${product.weight_per_bag || 0}, ${product.bags_per_pack || 1})">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="font-medium text-gray-900">${product.sku}</p>
+                    <p class="text-sm text-gray-600">${product.product_name}</p>
+                    <p class="text-xs text-gray-500">
+                        ${product.unit} | ${product.weight_per_bag || 0} กก./ถุง
+                        ${product.bags_per_pack ? ` | ${product.bags_per_pack} ถุง/แพ็ค` : ''}
+                    </p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm font-medium text-green-600">สต๊อก: ${(product.total_pieces_normal || 0).toLocaleString()}</p>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    resultsContainer.innerHTML = resultsHTML;
+    resultsContainer.classList.remove('hidden');
+}
+
+function hidePickProductResults() {
+    const resultsContainer = document.getElementById('pickProductResults');
+    if (resultsContainer) {
+        resultsContainer.classList.add('hidden');
+    }
+}
+
+function selectPickProduct(sku, productName, unit, weightPerBag, bagsPerPack) {
+    selectedPickProduct = {
+        sku,
+        productName,
+        unit,
+        weightPerBag: parseFloat(weightPerBag) || 0,
+        bagsPerPack: parseInt(bagsPerPack) || 1
+    };
+
+    // Update UI
+    document.getElementById('pickProductSearch').value = sku;
+    document.getElementById('pickSelectedProductSKU').textContent = sku;
+    document.getElementById('pickSelectedProductName').textContent = productName;
+    
+    document.getElementById('pickSelectedProductInfo').classList.remove('hidden');
+    hidePickProductResults();
+    
+    // Load available stock locations for this product
+    loadStockLocations(sku);
+    
+    // Get current stock
+    getCurrentStock(sku);
+}
+
+function clearPickSelectedProduct() {
+    selectedPickProduct = null;
+    selectedStockLocation = null;
+    
+    document.getElementById('pickProductSearch').value = '';
+    document.getElementById('pickSelectedProductInfo').classList.add('hidden');
+    document.getElementById('stockLocationsContainer').classList.add('hidden');
+    
+    // Clear form fields
+    document.getElementById('pickPieces').value = '';
+    document.getElementById('pickPacks').value = '';
+    document.getElementById('pickWeight').value = '';
+}
+
+function getCurrentStock(sku) {
+    googleScriptCall('getProductBySKU', sku)
+        .then(response => {
+            if (response.success && response.data) {
+                // This would need to be enhanced to get actual stock levels
+                document.getElementById('pickSelectedProductStock').textContent = 
+                    `สต๊อกคงเหลือ: ${(0).toLocaleString()} ชิ้น`; // Placeholder
+            }
+        })
+        .catch(error => {
+            console.error('Error getting stock:', error);
+        });
+}
+
+function loadStockLocations(sku) {
+    // For now, show sample locations
+    // In production, this would query actual locations with stock
+    const sampleLocations = [
+        { location_id: 'A01-01-001', stock: 100, lot: '2024-12-01' },
+        { location_id: 'A01-02-003', stock: 250, lot: '2024-11-15' },
+        { location_id: 'PF-01', stock: 50, lot: '2024-12-10' }
+    ];
+    
+    displayStockLocations(sampleLocations);
+}
+
+function displayStockLocations(locations) {
+    const container = document.getElementById('stockLocationsList');
+    
+    if (!locations || locations.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-center py-4">ไม่มีสต๊อกในคลัง</p>';
+        document.getElementById('stockLocationsContainer').classList.remove('hidden');
+        return;
+    }
+    
+    const locationsHTML = locations.map(location => `
+        <div class="stock-location-item p-4 rounded-lg cursor-pointer" 
+             onclick="selectStockLocation('${location.location_id}', ${location.stock})"
+             data-location="${location.location_id}">
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="font-medium text-gray-900">${location.location_id}</p>
+                    <p class="text-sm text-gray-600">Lot: ${location.lot || 'N/A'}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-lg font-semibold text-green-600">${location.stock.toLocaleString()}</p>
+                    <p class="text-xs text-gray-500">ชิ้น</p>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = locationsHTML;
+    document.getElementById('stockLocationsContainer').classList.remove('hidden');
+}
+
+function selectStockLocation(locationId, availableStock) {
+    selectedStockLocation = { locationId, availableStock };
+    
+    // Update UI
+    document.querySelectorAll('.stock-location-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+    
+    document.querySelector(`[data-location="${locationId}"]`).classList.add('selected');
+    
+    // Set max quantity
+    const piecesInput = document.getElementById('pickPieces');
+    piecesInput.max = availableStock;
+    piecesInput.placeholder = `สูงสุด ${availableStock.toLocaleString()} ชิ้น`;
+}
+
+function autoCalculatePickingWeight() {
+    if (!selectedPickProduct) return;
+    
+    const pieces = parseFloat(document.getElementById('pickPieces').value) || 0;
+    const weightPerPiece = selectedPickProduct.weightPerBag || 0;
+    
+    if (pieces > 0 && weightPerPiece > 0) {
+        const totalWeight = pieces * weightPerPiece;
+        document.getElementById('pickWeight').value = totalWeight.toFixed(3);
+        
+        // Calculate packs
+        if (selectedPickProduct.bagsPerPack > 0) {
+            const packs = Math.floor(pieces / selectedPickProduct.bagsPerPack);
+            document.getElementById('pickPacks').value = packs;
+        }
+    }
+}
+
+function handlePickingSubmit(event) {
+    event.preventDefault();
+    
+    if (!selectedPickProduct) {
+        showMessage('กรุณาเลือกสินค้าก่อน', 'error');
+        return;
+    }
+    
+    if (!selectedStockLocation) {
+        showMessage('กรุณาเลือกตำแหน่งเบิกสินค้า', 'error');
+        return;
+    }
+
+    // Validate required fields
+    const pieces = parseFloat(document.getElementById('pickPieces').value) || 0;
+    const pickingType = document.getElementById('pickingType').value;
+
+    if (pieces <= 0) {
+        showMessage('กรุณากรอกจำนวนที่เบิกที่ถูกต้อง', 'error');
+        return;
+    }
+
+    if (pieces > selectedStockLocation.availableStock) {
+        showMessage(`จำนวนที่เบิกเกินสต๊อกคงเหลือ (${selectedStockLocation.availableStock.toLocaleString()} ชิ้น)`, 'error');
+        return;
+    }
+
+    if (!pickingType) {
+        showMessage('กรุณาเลือกประเภทการเบิก', 'error');
+        return;
+    }
+
+    // Show loading state
+    setPickSubmitLoading(true);
+
+    // Prepare transaction data
+    const transactionData = {
+        sku: selectedPickProduct.sku,
+        main_type: 'จัดเตรียมสินค้า',
+        sub_type: pickingType,
+        pieces: -pieces, // Negative for outgoing
+        packs: -(parseFloat(document.getElementById('pickPacks').value) || 0),
+        weight: -(parseFloat(document.getElementById('pickWeight').value) || 0),
+        truck_number: document.getElementById('pickTruckNumber').value || null,
+        point_number: document.getElementById('pickPointNumber').value || null,
+        location_id: selectedStockLocation.locationId,
+        lot_document: document.getElementById('documentNumber').value || null,
+        customer_code: document.getElementById('customerCode').value || null,
+        customer_name: document.getElementById('customerName').value || null,
+        delivery_job_number: document.getElementById('deliveryJobNumber').value || null,
+        remark: document.getElementById('pickRemark').value || null,
+        status: 'ปกติ'
+    };
+
+    // Submit transaction
+    googleScriptCall('createTransaction', transactionData)
+        .then(response => {
+            if (response.success) {
+                showMessage('บันทึกการเบิกสินค้าเรียบร้อยแล้ว Tags ID: ' + response.tags_id, 'success');
+                resetPickingForm();
+                loadPickingStats();
+                loadRecentPicking();
+            } else {
+                showMessage('เกิดข้อผิดพลาด: ' + response.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Picking submission error:', error);
+            showMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+        })
+        .finally(() => {
+            setPickSubmitLoading(false);
+        });
+}
+
+function setPickSubmitLoading(isLoading) {
+    const button = document.querySelector('#singlePickForm button[type="submit"]');
+    const text = document.getElementById('pickSubmitText');
+    const spinner = document.getElementById('pickSubmitSpinner');
+    
+    if (button) button.disabled = isLoading;
+    if (text) text.textContent = isLoading ? 'กำลังบันทึก...' : 'บันทึกการเบิกสินค้า';
+    if (spinner) {
+        if (isLoading) {
+            spinner.classList.remove('hidden');
+        } else {
+            spinner.classList.add('hidden');
+        }
+    }
+}
+
+function resetPickingForm() {
+    // Clear form
+    document.getElementById('singlePickForm').reset();
+    
+    // Clear selected product and location
+    clearPickSelectedProduct();
+    
+    showMessage('รีเซ็ตฟอร์มเรียบร้อย', 'success');
+}
+
+function loadPickingStats() {
+    // For now, show static data
+    document.getElementById('todayPickingCount').textContent = '8';
+    document.getElementById('pendingOrders').textContent = '5';
+    document.getElementById('urgentOrders').textContent = '2';
+    document.getElementById('readyToShip').textContent = '12';
+}
+
+function loadRecentPicking() {
+    googleScriptCall('getTransactions', { 
+        main_type: 'จัดเตรียมสินค้า', 
+        limit: 10 
+    })
+        .then(response => {
+            if (response.success) {
+                displayRecentPicking(response.data || []);
+            } else {
+                console.error('Failed to load recent picking:', response.message);
+                displayPickingError();
+            }
+        })
+        .catch(error => {
+            console.error('Recent picking loading error:', error);
+            displayPickingError();
+        });
+}
+
+function displayRecentPicking(pickings) {
+    const tbody = document.getElementById('recentPickingTableBody');
+    
+    if (!pickings || pickings.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                    <i class="fas fa-inbox text-xl mb-2"></i>
+                    <p>ไม่มีการเบิกล่าสุด</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const rows = pickings.map(picking => {
+        const createdAt = new Date(picking.created_at);
+        const timeStr = createdAt.toLocaleTimeString('th-TH', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+
+        return `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${timeStr}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    ${picking.products?.sku || 'N/A'}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-900">
+                    ${picking.products?.product_name || 'N/A'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${Math.abs(picking.pieces || 0).toLocaleString()} ชิ้น
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${picking.customer_name || 'N/A'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                        ${picking.status || 'ปกติ'}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${picking.users?.full_name || picking.created_by_name || 'N/A'}
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    tbody.innerHTML = rows;
+}
+
+function displayPickingError() {
+    const tbody = document.getElementById('recentPickingTableBody');
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="7" class="px-6 py-8 text-center text-red-500">
+                <i class="fas fa-exclamation-triangle text-xl mb-2"></i>
+                <p>เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+                <button onclick="loadRecentPicking()" class="mt-2 px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+                    ลองใหม่
+                </button>
+            </td>
+        </tr>
+    `;
+}
+
+// Order-based picking functions
+function searchOrder() {
+    const orderNumber = document.getElementById('orderNumber').value.trim();
+    
+    if (!orderNumber) {
+        showMessage('กรุณากรอกเลขที่ใบสั่ง', 'error');
+        return;
+    }
+    
+    // For now, show placeholder message
+    showMessage('ฟังก์ชันค้นหาใบสั่งกำลังพัฒนา', 'info');
+    
+    // In production, this would search for order and display items
+    // displayOrderItems(orderItems);
+}
+
+function cancelOrderPicking() {
+    document.getElementById('orderNumber').value = '';
+    document.getElementById('orderItemsList').classList.add('hidden');
+}
+
+function processOrderPicking() {
+    showMessage('ฟังก์ชันดำเนินการเบิกตามใบสั่งกำลังพัฒนา', 'info');
+}
+
+// Scan mode and batch picking (placeholder functions)
+function scanMode() {
+    showMessage('โหมดสแกนบาร์โค้ดกำลังพัฒนา', 'info');
+}
+
+function batchPicking() {
+    setPickingMode('batch');
+}
+</script>
