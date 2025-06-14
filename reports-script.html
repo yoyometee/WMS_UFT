@@ -1,0 +1,572 @@
+<script>
+// Reports Script Functions
+let currentReportData = [];
+let currentReportType = 'stock';
+
+async function loadReports() {
+    try {
+        const content = `
+            <div class="space-y-6">
+                <!-- Header -->
+                <div class="flex justify-between items-center">
+                    <h1 class="text-3xl font-bold text-gray-800">รายงาน</h1>
+                    <div class="flex space-x-2">
+                        <button onclick="exportCurrentReport()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-file-excel mr-2"></i>ส่งออก Excel
+                        </button>
+                        <button onclick="printReport()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-print mr-2"></i>พิมพ์
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Report Type Selection -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">เลือกประเภทรายงาน</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button onclick="loadStockReport()" 
+                                class="report-type-btn p-4 border-2 border-blue-500 bg-blue-50 text-blue-700 rounded-lg transition-colors hover:bg-blue-100">
+                            <i class="fas fa-boxes text-2xl mb-2"></i>
+                            <div class="font-semibold">รายงานสต๊อกสินค้า</div>
+                            <div class="text-sm opacity-75">สต๊อกปัจจุบันของสินค้าทั้งหมด</div>
+                        </button>
+                        <button onclick="loadPickFaceReport()" 
+                                class="report-type-btn p-4 border-2 border-gray-300 text-gray-700 rounded-lg transition-colors hover:bg-gray-50">
+                            <i class="fas fa-hand-paper text-2xl mb-2"></i>
+                            <div class="font-semibold">รายงาน Pick Face</div>
+                            <div class="text-sm opacity-75">สินค้าในพื้นที่ Pick Face</div>
+                        </button>
+                        <button onclick="loadLocationReport()" 
+                                class="report-type-btn p-4 border-2 border-gray-300 text-gray-700 rounded-lg transition-colors hover:bg-gray-50">
+                            <i class="fas fa-map-marked-alt text-2xl mb-2"></i>
+                            <div class="font-semibold">รายงานการใช้พื้นที่</div>
+                            <div class="text-sm opacity-75">สถานะการใช้งานที่เก็บ</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Report Filters -->
+                <div id="reportFilters" class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">ตัวกรองรายงาน</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ประเภทสินค้า</label>
+                            <select id="reportProductType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">ทุกประเภท</option>
+                                <option value="สินค้าสำเร็จรูป">สินค้าสำเร็จรูป</option>
+                                <option value="วัตถุดิบ">วัตถุดิบ</option>
+                                <option value="บรรจุภัณฑ์">บรรจุภัณฑ์</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">สถานะสต๊อก</label>
+                            <select id="reportStockStatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">ทุกสถานะ</option>
+                                <option value="low">สต๊อกต่ำ</option>
+                                <option value="normal">สต๊อกปกติ</option>
+                                <option value="high">สต๊อกสูง</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ค้นหา SKU</label>
+                            <input type="text" id="reportSkuSearch" placeholder="ค้นหา SKU" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="applyReportFilters()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors w-full">
+                                <i class="fas fa-filter mr-2"></i>ใช้ตัวกรอง
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Summary -->
+                <div id="reportSummary" class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <!-- Summary cards will be populated here -->
+                </div>
+
+                <!-- Report Content -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 id="reportTitle" class="text-lg font-semibold text-gray-800">รายงานสต๊อกสินค้า</h3>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead id="reportTableHead" class="bg-gray-50">
+                                <!-- Headers will be populated based on report type -->
+                            </thead>
+                            <tbody id="reportTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Loading placeholder -->
+                                <tr>
+                                    <td colspan="10" class="px-6 py-12 text-center">
+                                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                                        <p class="text-gray-500 mt-2">กำลังโหลดรายงาน...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('mainContent').innerHTML = content;
+        await loadStockReport(); // Load default report
+        
+    } catch (error) {
+        console.error('Error loading reports:', error);
+        showMessage('เกิดข้อผิดพลาดในการโหลดหน้ารายงาน', 'error');
+    }
+}
+
+async function loadStockReport() {
+    try {
+        currentReportType = 'stock';
+        updateReportTypeButtons('stock');
+        
+        document.getElementById('reportTitle').textContent = 'รายงานสต๊อกสินค้า';
+        
+        const result = await googleScriptCall('getCurrentStockReport');
+        
+        if (result.success) {
+            currentReportData = result.data;
+            renderStockReportTable(currentReportData);
+            updateStockSummary(currentReportData);
+        } else {
+            showMessage('เกิดข้อผิดพลาดในการโหลดรายงานสต๊อก: ' + result.message, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error loading stock report:', error);
+        showMessage('เกิดข้อผิดพลาดในการโหลดรายงานสต๊อก', 'error');
+    }
+}
+
+async function loadPickFaceReport() {
+    try {
+        currentReportType = 'pickface';
+        updateReportTypeButtons('pickface');
+        
+        document.getElementById('reportTitle').textContent = 'รายงาน Pick Face';
+        
+        const result = await googleScriptCall('getPickFaceReport');
+        
+        if (result.success) {
+            currentReportData = result.data;
+            renderPickFaceReportTable(currentReportData);
+            updatePickFaceSummary(currentReportData);
+        } else {
+            showMessage('เกิดข้อผิดพลาดในการโหลดรายงาน Pick Face: ' + result.message, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error loading pick face report:', error);
+        showMessage('เกิดข้อผิดพลาดในการโหลดรายงาน Pick Face', 'error');
+    }
+}
+
+async function loadLocationReport() {
+    try {
+        currentReportType = 'location';
+        updateReportTypeButtons('location');
+        
+        document.getElementById('reportTitle').textContent = 'รายงานการใช้พื้นที่';
+        
+        const result = await googleScriptCall('getLocationReport');
+        
+        if (result.success) {
+            currentReportData = result.data;
+            renderLocationReportTable(currentReportData);
+            updateLocationSummary(currentReportData);
+        } else {
+            showMessage('เกิดข้อผิดพลาดในการโหลดรายงานการใช้พื้นที่: ' + result.message, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error loading location report:', error);
+        showMessage('เกิดข้อผิดพลาดในการโหลดรายงานการใช้พื้นที่', 'error');
+    }
+}
+
+function updateReportTypeButtons(activeType) {
+    // Reset all buttons
+    document.querySelectorAll('.report-type-btn').forEach(btn => {
+        btn.className = 'report-type-btn p-4 border-2 border-gray-300 text-gray-700 rounded-lg transition-colors hover:bg-gray-50';
+    });
+    
+    // Activate current button
+    const buttons = document.querySelectorAll('.report-type-btn');
+    let activeIndex = 0;
+    if (activeType === 'pickface') activeIndex = 1;
+    if (activeType === 'location') activeIndex = 2;
+    
+    if (buttons[activeIndex]) {
+        buttons[activeIndex].className = 'report-type-btn p-4 border-2 border-blue-500 bg-blue-50 text-blue-700 rounded-lg transition-colors hover:bg-blue-100';
+    }
+}
+
+function renderStockReportTable(data) {
+    const head = document.getElementById('reportTableHead');
+    const body = document.getElementById('reportTableBody');
+    
+    head.innerHTML = `
+        <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อสินค้า</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ประเภท</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">หน่วย</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">สต๊อกปกติ</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">รอตรวจสอบ</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">เสียหาย</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">รวม</th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+        </tr>
+    `;
+    
+    if (!data || data.length === 0) {
+        body.innerHTML = `
+            <tr>
+                <td colspan="9" class="px-6 py-12 text-center text-gray-500">
+                    <i class="fas fa-inbox text-4xl mb-2"></i>
+                    <p>ไม่มีข้อมูลสต๊อก</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const rows = data.map(item => {
+        const totalStock = (item.total_pieces_normal || 0) + (item.total_pieces_pending || 0) + (item.total_pieces_damaged || 0);
+        const stockStatus = getStockStatus(item.total_pieces_normal, item.min_stock);
+        
+        return `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${item.sku || ''}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-gray-900">${item.product_name || ''}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-gray-500">${item.product_type || 'N/A'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-gray-500">${item.unit || ''}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-gray-900">${(item.total_pieces_normal || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-yellow-600">${(item.total_pieces_pending || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-red-600">${(item.total_pieces_damaged || 0).toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-right font-medium text-gray-900">${totalStock.toLocaleString()}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${stockStatus.class}">
+                        ${stockStatus.text}
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    body.innerHTML = rows;
+}
+
+function renderPickFaceReportTable(data) {
+    const head = document.getElementById('reportTableHead');
+    const body = document.getElementById('reportTableBody');
+    
+    head.innerHTML = `
+        <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อสินค้า</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ที่เก็บ</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">จำนวน</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+        </tr>
+    `;
+    
+    // For pick face report, data structure might be different
+    // This is a placeholder implementation
+    const rows = data.map(item => `
+        <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${item.sku || ''}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-gray-900">${item.product_name || ''}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-gray-500">${item.location_id || 'N/A'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-gray-900">${(item.quantity || 0).toLocaleString()}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-gray-500">${item.status || 'ปกติ'}</td>
+        </tr>
+    `).join('');
+
+    body.innerHTML = rows || `
+        <tr>
+            <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                <i class="fas fa-inbox text-4xl mb-2"></i>
+                <p>ไม่มีข้อมูล Pick Face</p>
+            </td>
+        </tr>
+    `;
+}
+
+function renderLocationReportTable(data) {
+    const head = document.getElementById('reportTableHead');
+    const body = document.getElementById('reportTableBody');
+    
+    head.innerHTML = `
+        <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">รหัสที่เก็บ</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">โซน</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ประเภท</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">การใช้งาน (%)</th>
+        </tr>
+    `;
+    
+    if (!data || data.length === 0) {
+        body.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                    <i class="fas fa-inbox text-4xl mb-2"></i>
+                    <p>ไม่มีข้อมูลที่เก็บ</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const rows = data.map(item => {
+        const utilizationPercent = item.utilization_percent || 0;
+        const utilizationClass = utilizationPercent > 80 ? 'text-red-600' : 
+                                utilizationPercent > 60 ? 'text-yellow-600' : 'text-green-600';
+        
+        return `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${item.location_code || ''}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-gray-500">${item.zone || 'N/A'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-gray-500">${item.location_type || 'N/A'}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${item.status === 'ว่าง' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                        ${item.status || 'N/A'}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-gray-500">${item.current_sku || '-'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-right ${utilizationClass} font-medium">
+                    ${utilizationPercent.toFixed(1)}%
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    body.innerHTML = rows;
+}
+
+function getStockStatus(currentStock, minStock) {
+    const stock = currentStock || 0;
+    const min = minStock || 0;
+    
+    if (stock <= min) {
+        return { class: 'bg-red-100 text-red-800', text: 'สต๊อกต่ำ' };
+    } else if (stock <= min * 1.5) {
+        return { class: 'bg-yellow-100 text-yellow-800', text: 'ใกล้หมด' };
+    } else {
+        return { class: 'bg-green-100 text-green-800', text: 'ปกติ' };
+    }
+}
+
+function updateStockSummary(data) {
+    const summary = {
+        total: data.length,
+        lowStock: data.filter(item => (item.total_pieces_normal || 0) <= (item.min_stock || 0)).length,
+        totalValue: data.reduce((sum, item) => sum + ((item.total_pieces_normal || 0) + (item.total_pieces_pending || 0) + (item.total_pieces_damaged || 0)), 0),
+        totalDamaged: data.reduce((sum, item) => sum + (item.total_pieces_damaged || 0), 0)
+    };
+
+    updateReportSummary([
+        { title: 'จำนวนสินค้าทั้งหมด', value: summary.total, icon: 'fas fa-boxes', color: 'blue' },
+        { title: 'สินค้าสต๊อกต่ำ', value: summary.lowStock, icon: 'fas fa-exclamation-triangle', color: 'red' },
+        { title: 'สต๊อกรวม (ชิ้น)', value: summary.totalValue, icon: 'fas fa-warehouse', color: 'green' },
+        { title: 'สินค้าเสียหาย (ชิ้น)', value: summary.totalDamaged, icon: 'fas fa-times-circle', color: 'orange' }
+    ]);
+}
+
+function updatePickFaceSummary(data) {
+    const summary = {
+        total: data.length,
+        occupied: data.filter(item => item.status === 'ไม่ว่าง').length,
+        available: data.filter(item => item.status === 'ว่าง').length,
+        utilization: data.length > 0 ? (data.filter(item => item.status === 'ไม่ว่าง').length / data.length * 100) : 0
+    };
+
+    updateReportSummary([
+        { title: 'ตำแหน่งทั้งหมด', value: summary.total, icon: 'fas fa-hand-paper', color: 'blue' },
+        { title: 'ตำแหน่งที่ใช้', value: summary.occupied, icon: 'fas fa-check-circle', color: 'green' },
+        { title: 'ตำแหน่งว่าง', value: summary.available, icon: 'fas fa-circle', color: 'gray' },
+        { title: 'การใช้งาน (%)', value: summary.utilization.toFixed(1), icon: 'fas fa-chart-pie', color: 'orange' }
+    ]);
+}
+
+function updateLocationSummary(data) {
+    const summary = {
+        total: data.length,
+        occupied: data.filter(item => item.status === 'ไม่ว่าง').length,
+        available: data.filter(item => item.status === 'ว่าง').length,
+        utilization: data.length > 0 ? (data.filter(item => item.status === 'ไม่ว่าง').length / data.length * 100) : 0
+    };
+
+    updateReportSummary([
+        { title: 'ที่เก็บทั้งหมด', value: summary.total, icon: 'fas fa-map-marked-alt', color: 'blue' },
+        { title: 'ที่เก็บที่ใช้', value: summary.occupied, icon: 'fas fa-check-circle', color: 'green' },
+        { title: 'ที่เก็บว่าง', value: summary.available, icon: 'fas fa-circle', color: 'gray' },
+        { title: 'การใช้งาน (%)', value: summary.utilization.toFixed(1), icon: 'fas fa-chart-pie', color: 'orange' }
+    ]);
+}
+
+function updateReportSummary(summaryData) {
+    const summaryHtml = summaryData.map(item => `
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <div class="flex items-center">
+                <div class="p-3 bg-${item.color}-100 rounded-full">
+                    <i class="${item.icon} text-${item.color}-600 text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">${item.title}</p>
+                    <p class="text-2xl font-bold text-${item.color}-600">${typeof item.value === 'number' ? item.value.toLocaleString() : item.value}</p>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    document.getElementById('reportSummary').innerHTML = summaryHtml;
+}
+
+function applyReportFilters() {
+    // Apply filters based on current report type
+    // This is a simplified implementation
+    const productType = document.getElementById('reportProductType').value;
+    const stockStatus = document.getElementById('reportStockStatus').value;
+    const skuSearch = document.getElementById('reportSkuSearch').value.toLowerCase();
+    
+    let filteredData = currentReportData;
+    
+    if (productType) {
+        filteredData = filteredData.filter(item => item.product_type === productType);
+    }
+    
+    if (skuSearch) {
+        filteredData = filteredData.filter(item => 
+            (item.sku || '').toLowerCase().includes(skuSearch)
+        );
+    }
+    
+    if (stockStatus && currentReportType === 'stock') {
+        filteredData = filteredData.filter(item => {
+            const status = getStockStatus(item.total_pieces_normal, item.min_stock);
+            switch (stockStatus) {
+                case 'low': return status.text === 'สต๊อกต่ำ';
+                case 'normal': return status.text === 'ปกติ';
+                case 'high': return (item.total_pieces_normal || 0) > (item.max_stock || Infinity);
+                default: return true;
+            }
+        });
+    }
+    
+    // Re-render table with filtered data
+    switch (currentReportType) {
+        case 'stock':
+            renderStockReportTable(filteredData);
+            updateStockSummary(filteredData);
+            break;
+        case 'pickface':
+            renderPickFaceReportTable(filteredData);
+            updatePickFaceSummary(filteredData);
+            break;
+        case 'location':
+            renderLocationReportTable(filteredData);
+            updateLocationSummary(filteredData);
+            break;
+    }
+}
+
+async function exportCurrentReport() {
+    try {
+        showLoading();
+        
+        let headers = [];
+        let csvData = [];
+        
+        switch (currentReportType) {
+            case 'stock':
+                headers = ['SKU', 'ชื่อสินค้า', 'ประเภท', 'หน่วย', 'สต๊อกปกติ', 'รอตรวจสอบ', 'เสียหาย', 'รวม'];
+                csvData = currentReportData.map(item => [
+                    item.sku || '',
+                    item.product_name || '',
+                    item.product_type || '',
+                    item.unit || '',
+                    item.total_pieces_normal || 0,
+                    item.total_pieces_pending || 0,
+                    item.total_pieces_damaged || 0,
+                    (item.total_pieces_normal || 0) + (item.total_pieces_pending || 0) + (item.total_pieces_damaged || 0)
+                ]);
+                break;
+            case 'pickface':
+                headers = ['SKU', 'ชื่อสินค้า', 'ที่เก็บ', 'จำนวน', 'สถานะ'];
+                csvData = currentReportData.map(item => [
+                    item.sku || '',
+                    item.product_name || '',
+                    item.location_id || '',
+                    item.quantity || 0,
+                    item.status || ''
+                ]);
+                break;
+            case 'location':
+                headers = ['รหัสที่เก็บ', 'โซน', 'ประเภท', 'สถานะ', 'SKU', 'การใช้งาน (%)'];
+                csvData = currentReportData.map(item => [
+                    item.location_code || '',
+                    item.zone || '',
+                    item.location_type || '',
+                    item.status || '',
+                    item.current_sku || '',
+                    (item.utilization_percent || 0).toFixed(1)
+                ]);
+                break;
+        }
+        
+        const csvContent = [headers, ...csvData]
+            .map(row => row.map(cell => `"${cell}"`).join(','))
+            .join('\n');
+        
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${currentReportType}_report_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        
+        showMessage('ส่งออกรายงานเรียบร้อยแล้ว', 'success');
+        
+    } catch (error) {
+        console.error('Error exporting report:', error);
+        showMessage('เกิดข้อผิดพลาดในการส่งออกรายงาน', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+function printReport() {
+    const printWindow = window.open('', '_blank');
+    const reportContent = document.querySelector('#mainContent').innerHTML;
+    
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>รายงาน ${currentReportType}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    table { border-collapse: collapse; width: 100%; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f2f2f2; }
+                    .no-print { display: none; }
+                </style>
+            </head>
+            <body>
+                ${reportContent}
+            </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+}
+</script>
