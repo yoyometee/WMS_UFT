@@ -1,0 +1,662 @@
+<script>
+// BOM (Bill of Materials) Management Script Functions
+let bomData = [];
+let productsData = [];
+let currentEditingBOM = null;
+let bomComponents = [];
+
+async function loadBOM() {
+    try {
+        const content = `
+            <div class="space-y-6">
+                <!-- Header -->
+                <div class="flex justify-between items-center">
+                    <h1 class="text-3xl font-bold text-gray-800">สูตรการผลิต (BOM)</h1>
+                    <button onclick="showAddBOMModal()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-plus mr-2"></i>เพิ่มสูตรใหม่
+                    </button>
+                </div>
+
+                <!-- Search and Filters -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ค้นหา SKU สินค้าสำเร็จรูป</label>
+                            <input type="text" id="bomSearch" placeholder="ค้นหา SKU..."
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   onkeyup="searchBOMs()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">สถานะ</label>
+                            <select id="bomStatusFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    onchange="filterBOMs()">
+                                <option value="">ทุกสถานะ</option>
+                                <option value="true">ใช้งานอยู่</option>
+                                <option value="false">ไม่ใช้งาน</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="clearBOMFilters()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors w-full">
+                                <i class="fas fa-times mr-2"></i>ล้างตัวกรอง
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BOM Table -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800">รายการสูตรการผลิต</h3>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU สินค้าสำเร็จรูป</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อสินค้า</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">เวอร์ชัน</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">จำนวนส่วนประกอบ</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">การจัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bomTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Loading placeholder -->
+                                <tr>
+                                    <td colspan="6" class="px-6 py-12 text-center">
+                                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                                        <p class="text-gray-500 mt-2">กำลังโหลดข้อมูล...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add/Edit BOM Modal -->
+            <div id="bomModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center">
+                <div class="bg-white p-6 rounded-lg shadow-lg max-w-4xl w-full mx-4 max-h-screen overflow-y-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 id="bomModalTitle" class="text-lg font-semibold">เพิ่มสูตรการผลิตใหม่</h3>
+                        <button onclick="hideBOMModal()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <form id="bomForm" onsubmit="saveBOM(event)">
+                        <!-- BOM Header -->
+                        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                            <h4 class="text-md font-semibold mb-4">ข้อมูลสินค้าสำเร็จรูป</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">SKU สินค้าสำเร็จรูป *</label>
+                                    <select id="finishedProductSKU" required
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            onchange="loadProductInfo()">
+                                        <option value="">เลือกสินค้าสำเร็จรูป</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อสินค้า</label>
+                                    <input type="text" id="finishedProductName" readonly
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Components Section -->
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="text-md font-semibold">ส่วนประกอบ</h4>
+                                <button type="button" onclick="addComponent()" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition-colors">
+                                    <i class="fas fa-plus mr-1"></i>เพิ่มส่วนประกอบ
+                                </button>
+                            </div>
+                            
+                            <div id="componentsContainer" class="space-y-3">
+                                <!-- Components will be added here -->
+                            </div>
+                        </div>
+                        
+                        <div class="flex space-x-4">
+                            <button type="submit" class="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                                <i class="fas fa-save mr-2"></i>บันทึก
+                            </button>
+                            <button type="button" onclick="hideBOMModal()" 
+                                    class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors">
+                                ยกเลิก
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- BOM Details Modal -->
+            <div id="bomDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center">
+                <div class="bg-white p-6 rounded-lg shadow-lg max-w-3xl w-full mx-4 max-h-screen overflow-y-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold">รายละเอียดสูตรการผลิต</h3>
+                        <button onclick="hideBOMDetails()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <div id="bomDetailsContent">
+                        <!-- Content will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Component Template (Hidden) -->
+            <div id="componentTemplate" class="hidden">
+                <div class="component-row bg-white p-4 border border-gray-200 rounded-lg">
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">SKU ส่วนประกอบ *</label>
+                            <select class="component-sku w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required onchange="updateComponentInfo(this)">
+                                <option value="">เลือกส่วนประกอบ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ประเภท *</label>
+                            <select class="component-type w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                <option value="">เลือกประเภท</option>
+                                <option value="วัตถุดิบ">วัตถุดิบ</option>
+                                <option value="บรรจุภัณฑ์">บรรจุภัณฑ์</option>
+                                <option value="ส่วนประกอบ">ส่วนประกอบ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">จำนวน *</label>
+                            <input type="number" step="0.001" class="component-quantity w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required min="0">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">หน่วย</label>
+                            <input type="text" class="component-unit w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100" readonly>
+                        </div>
+                        <div class="flex items-end">
+                            <button type="button" onclick="removeComponent(this)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-colors w-full">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('mainContent').innerHTML = content;
+        await loadBOMData();
+        await loadProductsForBOM();
+        
+    } catch (error) {
+        console.error('Error loading BOM:', error);
+        showMessage('เกิดข้อผิดพลาดในการโหลดหน้าสูตรการผลิต', 'error');
+    }
+}
+
+async function loadBOMData() {
+    try {
+        const result = await googleScriptCall('getAllBOMs');
+        
+        if (result.success) {
+            bomData = result.data;
+            renderBOMTable(bomData);
+        } else {
+            showMessage('เกิดข้อผิดพลาดในการโหลดข้อมูล BOM: ' + result.message, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error loading BOM data:', error);
+        showMessage('เกิดข้อผิดพลาดในการโหลดข้อมูล BOM', 'error');
+    }
+}
+
+async function loadProductsForBOM() {
+    try {
+        const result = await googleScriptCall('getAllProducts');
+        
+        if (result.success) {
+            productsData = result.data;
+            populateProductSelects();
+        }
+        
+    } catch (error) {
+        console.error('Error loading products for BOM:', error);
+    }
+}
+
+function populateProductSelects() {
+    const finishedProductSelect = document.getElementById('finishedProductSKU');
+    
+    // Clear existing options (keep first option)
+    finishedProductSelect.innerHTML = '<option value="">เลือกสินค้าสำเร็จรูป</option>';
+    
+    // Add finished products
+    const finishedProducts = productsData.filter(p => p.product_type === 'สินค้าสำเร็จรูป');
+    finishedProducts.forEach(product => {
+        const option = document.createElement('option');
+        option.value = product.sku;
+        option.textContent = `${product.sku} - ${product.product_name}`;
+        finishedProductSelect.appendChild(option);
+    });
+}
+
+function populateComponentSelect(selectElement) {
+    // Clear existing options
+    selectElement.innerHTML = '<option value="">เลือกส่วนประกอบ</option>';
+    
+    // Add all products except finished products
+    const components = productsData.filter(p => p.product_type !== 'สินค้าสำเร็จรูป');
+    components.forEach(product => {
+        const option = document.createElement('option');
+        option.value = product.sku;
+        option.textContent = `${product.sku} - ${product.product_name}`;
+        option.dataset.unit = product.unit || '';
+        selectElement.appendChild(option);
+    });
+}
+
+function renderBOMTable(boms) {
+    const tbody = document.getElementById('bomTableBody');
+    
+    if (!boms || boms.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                    <i class="fas fa-inbox text-4xl mb-2"></i>
+                    <p>ไม่มีข้อมูลสูตรการผลิต</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const rows = boms.map(bom => `
+        <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${bom.finished_product_sku || ''}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-gray-900">${bom.products?.product_name || 'N/A'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-gray-500">${bom.bom_version || 1}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-gray-500">${bom.bom_components?.length || 0} รายการ</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${bom.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                    ${bom.is_active ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                <button onclick="viewBOMDetails('${bom.finished_product_sku}')" class="text-blue-600 hover:text-blue-900">
+                    <i class="fas fa-eye"></i> ดูรายละเอียด
+                </button>
+                <button onclick="editBOM('${bom.finished_product_sku}')" class="text-green-600 hover:text-green-900">
+                    <i class="fas fa-edit"></i> แก้ไข
+                </button>
+                <button onclick="toggleBOMStatus('${bom.finished_product_sku}', ${!bom.is_active})" class="text-orange-600 hover:text-orange-900">
+                    <i class="fas fa-toggle-${bom.is_active ? 'off' : 'on'}"></i> ${bom.is_active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
+                </button>
+            </td>
+        </tr>
+    `).join('');
+
+    tbody.innerHTML = rows;
+}
+
+// Search and filter functions
+function searchBOMs() {
+    const searchTerm = document.getElementById('bomSearch').value.toLowerCase();
+    const filteredBOMs = bomData.filter(bom => 
+        (bom.finished_product_sku || '').toLowerCase().includes(searchTerm) ||
+        (bom.products?.product_name || '').toLowerCase().includes(searchTerm)
+    );
+    renderBOMTable(filteredBOMs);
+}
+
+function filterBOMs() {
+    const statusFilter = document.getElementById('bomStatusFilter').value;
+    let filteredBOMs = bomData;
+    
+    if (statusFilter !== '') {
+        const isActive = statusFilter === 'true';
+        filteredBOMs = filteredBOMs.filter(bom => bom.is_active === isActive);
+    }
+    
+    renderBOMTable(filteredBOMs);
+}
+
+function clearBOMFilters() {
+    document.getElementById('bomSearch').value = '';
+    document.getElementById('bomStatusFilter').value = '';
+    renderBOMTable(bomData);
+}
+
+// Modal functions
+function showAddBOMModal() {
+    currentEditingBOM = null;
+    bomComponents = [];
+    document.getElementById('bomModalTitle').textContent = 'เพิ่มสูตรการผลิตใหม่';
+    clearBOMForm();
+    document.getElementById('bomModal').classList.remove('hidden');
+}
+
+function editBOM(finishedProductSKU) {
+    currentEditingBOM = bomData.find(b => b.finished_product_sku === finishedProductSKU);
+    if (!currentEditingBOM) return;
+    
+    document.getElementById('bomModalTitle').textContent = 'แก้ไขสูตรการผลิต';
+    fillBOMForm(currentEditingBOM);
+    document.getElementById('bomModal').classList.remove('hidden');
+}
+
+function hideBOMModal() {
+    document.getElementById('bomModal').classList.add('hidden');
+    clearBOMForm();
+    currentEditingBOM = null;
+    bomComponents = [];
+}
+
+function clearBOMForm() {
+    document.getElementById('bomForm').reset();
+    document.getElementById('finishedProductName').value = '';
+    document.getElementById('componentsContainer').innerHTML = '';
+    bomComponents = [];
+}
+
+function fillBOMForm(bom) {
+    document.getElementById('finishedProductSKU').value = bom.finished_product_sku;
+    document.getElementById('finishedProductName').value = bom.products?.product_name || '';
+    
+    // Load components
+    bomComponents = bom.bom_components || [];
+    renderComponents();
+    
+    // Disable finished product selection for editing
+    document.getElementById('finishedProductSKU').disabled = true;
+}
+
+function loadProductInfo() {
+    const sku = document.getElementById('finishedProductSKU').value;
+    const product = productsData.find(p => p.sku === sku);
+    
+    if (product) {
+        document.getElementById('finishedProductName').value = product.product_name || '';
+    } else {
+        document.getElementById('finishedProductName').value = '';
+    }
+}
+
+// Component management
+function addComponent() {
+    const template = document.getElementById('componentTemplate');
+    const clone = template.cloneNode(true);
+    clone.id = '';
+    clone.classList.remove('hidden');
+    
+    // Populate component SKU select
+    const componentSelect = clone.querySelector('.component-sku');
+    populateComponentSelect(componentSelect);
+    
+    document.getElementById('componentsContainer').appendChild(clone);
+}
+
+function removeComponent(button) {
+    const componentRow = button.closest('.component-row');
+    componentRow.remove();
+}
+
+function updateComponentInfo(selectElement) {
+    const componentRow = selectElement.closest('.component-row');
+    const unitInput = componentRow.querySelector('.component-unit');
+    
+    const selectedOption = selectElement.options[selectElement.selectedIndex];
+    const unit = selectedOption.dataset.unit || '';
+    
+    unitInput.value = unit;
+}
+
+function renderComponents() {
+    const container = document.getElementById('componentsContainer');
+    container.innerHTML = '';
+    
+    bomComponents.forEach((component, index) => {
+        const template = document.getElementById('componentTemplate');
+        const clone = template.cloneNode(true);
+        clone.id = '';
+        clone.classList.remove('hidden');
+        
+        // Populate and set values
+        const componentSelect = clone.querySelector('.component-sku');
+        populateComponentSelect(componentSelect);
+        componentSelect.value = component.component_sku;
+        
+        clone.querySelector('.component-type').value = component.component_type;
+        clone.querySelector('.component-quantity').value = component.quantity;
+        clone.querySelector('.component-unit').value = component.unit;
+        
+        container.appendChild(clone);
+    });
+}
+
+// Save BOM
+async function saveBOM(event) {
+    event.preventDefault();
+    showLoading();
+    
+    try {
+        const finishedProductSKU = document.getElementById('finishedProductSKU').value;
+        
+        // Collect components data
+        const componentRows = document.querySelectorAll('.component-row');
+        const components = [];
+        
+        for (let row of componentRows) {
+            const sku = row.querySelector('.component-sku').value;
+            const type = row.querySelector('.component-type').value;
+            const quantity = row.querySelector('.component-quantity').value;
+            const unit = row.querySelector('.component-unit').value;
+            
+            if (sku && type && quantity) {
+                components.push({
+                    sku: sku,
+                    type: type,
+                    quantity: parseFloat(quantity),
+                    unit: unit
+                });
+            }
+        }
+        
+        if (components.length === 0) {
+            showMessage('กรุณาเพิ่มส่วนประกอบอย่างน้อย 1 รายการ', 'error');
+            return;
+        }
+        
+        const bomData = {
+            finished_product_sku: finishedProductSKU,
+            components: components
+        };
+        
+        const result = await googleScriptCall('saveBOM', bomData);
+        
+        if (result.success) {
+            showMessage(result.message, 'success');
+            hideBOMModal();
+            await loadBOMData();
+        } else {
+            showMessage(result.message, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error saving BOM:', error);
+        showMessage('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// BOM Details
+function viewBOMDetails(finishedProductSKU) {
+    const bom = bomData.find(b => b.finished_product_sku === finishedProductSKU);
+    if (!bom) return;
+    
+    const components = bom.bom_components || [];
+    
+    const detailsHtml = `
+        <div class="space-y-6">
+            <!-- BOM Header -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h4 class="text-md font-semibold mb-2">ข้อมูลสินค้าสำเร็จรูป</h4>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><strong>SKU:</strong> ${bom.finished_product_sku}</div>
+                    <div><strong>ชื่อสินค้า:</strong> ${bom.products?.product_name || 'N/A'}</div>
+                    <div><strong>เวอร์ชัน:</strong> ${bom.bom_version || 1}</div>
+                    <div><strong>สถานะ:</strong> 
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${bom.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${bom.is_active ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Components Table -->
+            <div>
+                <h4 class="text-md font-semibold mb-4">ส่วนประกอบ (${components.length} รายการ)</h4>
+                ${components.length > 0 ? `
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">ชื่อสินค้า</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">ประเภท</th>
+                                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">จำนวน</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">หน่วย</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                ${components.map(comp => `
+                                    <tr>
+                                        <td class="px-4 py-2 text-sm font-medium text-gray-900">${comp.component_sku}</td>
+                                        <td class="px-4 py-2 text-sm text-gray-900">${comp.products?.product_name || 'N/A'}</td>
+                                        <td class="px-4 py-2 text-sm text-gray-500">${comp.component_type}</td>
+                                        <td class="px-4 py-2 text-sm text-gray-900 text-right">${(comp.quantity || 0).toLocaleString()}</td>
+                                        <td class="px-4 py-2 text-sm text-gray-500">${comp.unit || ''}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                ` : `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-inbox text-4xl mb-2"></i>
+                        <p>ไม่มีส่วนประกอบ</p>
+                    </div>
+                `}
+            </div>
+
+            <!-- Cost Analysis -->
+            <div class="bg-blue-50 p-4 rounded-lg">
+                <h4 class="text-md font-semibold mb-2">การวิเคราะห์ต้นทุน</h4>
+                <p class="text-sm text-gray-600">ฟีเจอร์การคำนวณต้นทุนจะพัฒนาในเวอร์ชันถัดไป</p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex space-x-4">
+                <button onclick="editBOM('${bom.finished_product_sku}')" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                    <i class="fas fa-edit mr-2"></i>แก้ไข
+                </button>
+                <button onclick="duplicateBOM('${bom.finished_product_sku}')" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                    <i class="fas fa-copy mr-2"></i>คัดลอกสูตร
+                </button>
+                <button onclick="exportBOM('${bom.finished_product_sku}')" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                    <i class="fas fa-download mr-2"></i>ส่งออก
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('bomDetailsContent').innerHTML = detailsHtml;
+    document.getElementById('bomDetailsModal').classList.remove('hidden');
+}
+
+function hideBOMDetails() {
+    document.getElementById('bomDetailsModal').classList.add('hidden');
+}
+
+// BOM Status Management
+async function toggleBOMStatus(finishedProductSKU, newStatus) {
+    showConfirmModal(
+        `คุณต้องการ${newStatus ? 'เปิด' : 'ปิด'}ใช้งานสูตรการผลิตนี้หรือไม่?`,
+        async () => {
+            try {
+                showLoading();
+                
+                // Update local data (in real app, this would call backend)
+                const bom = bomData.find(b => b.finished_product_sku === finishedProductSKU);
+                if (bom) {
+                    bom.is_active = newStatus;
+                }
+                
+                renderBOMTable(bomData);
+                showMessage(`${newStatus ? 'เปิด' : 'ปิด'}ใช้งานสูตรการผลิตเรียบร้อยแล้ว`, 'success');
+                
+            } catch (error) {
+                console.error('Error toggling BOM status:', error);
+                showMessage('เกิดข้อผิดพลาดในการเปลี่ยนสถานะ', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+    );
+}
+
+// Additional BOM functions
+function duplicateBOM(finishedProductSKU) {
+    const bom = bomData.find(b => b.finished_product_sku === finishedProductSKU);
+    if (!bom) return;
+    
+    // Set up form for duplication
+    currentEditingBOM = null;
+    bomComponents = [...(bom.bom_components || [])];
+    
+    document.getElementById('bomModalTitle').textContent = 'คัดลอกสูตรการผลิต';
+    document.getElementById('finishedProductSKU').value = '';
+    document.getElementById('finishedProductName').value = '';
+    document.getElementById('finishedProductSKU').disabled = false;
+    
+    renderComponents();
+    document.getElementById('bomModal').classList.remove('hidden');
+    
+    showMessage('กรุณาเลือกสินค้าสำเร็จรูปใหม่สำหรับสูตรที่คัดลอก', 'info');
+}
+
+function exportBOM(finishedProductSKU) {
+    const bom = bomData.find(b => b.finished_product_sku === finishedProductSKU);
+    if (!bom) return;
+    
+    const components = bom.bom_components || [];
+    
+    const csvData = [
+        ['สูตรการผลิต', bom.finished_product_sku, bom.products?.product_name || ''],
+        ['เวอร์ชัน', bom.bom_version || 1],
+        [''],
+        ['SKU ส่วนประกอบ', 'ชื่อสินค้า', 'ประเภท', 'จำนวน', 'หน่วย'],
+        ...components.map(comp => [
+            comp.component_sku,
+            comp.products?.product_name || '',
+            comp.component_type,
+            comp.quantity || 0,
+            comp.unit || ''
+        ])
+    ];
+    
+    const csvContent = csvData
+        .map(row => row.map(cell => `"${cell}"`).join(','))
+        .join('\n');
+    
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `BOM_${finishedProductSKU}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    
+    showMessage('ส่งออกสูตรการผลิตเรียบร้อยแล้ว', 'success');
+}
+</script>
