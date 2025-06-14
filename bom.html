@@ -1,0 +1,1023 @@
+<!-- BOM Management Content -->
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">สูตรการผลิต (BOM)</h1>
+            <p class="text-gray-600 mt-1">จัดการสูตรและส่วนประกอบของสินค้าสำเร็จรูป</p>
+        </div>
+        <div class="flex space-x-4">
+            <button onclick="importBOMFromExcel()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center">
+                <i class="fas fa-upload mr-2"></i>นำเข้าจาก Excel
+            </button>
+            <button onclick="openNewBOMModal()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+                <i class="fas fa-plus mr-2"></i>สร้าง BOM ใหม่
+            </button>
+        </div>
+    </div>
+
+    <!-- BOM Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">BOM ทั้งหมด</p>
+                    <p id="totalBOMs" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <i class="fas fa-list-alt text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">BOM ใช้งาน</p>
+                    <p id="activeBOMs" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">วัตถุดิบรวม</p>
+                    <p id="totalComponents" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-orange-100 rounded-full p-3">
+                    <i class="fas fa-puzzle-piece text-orange-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">ประเภทส่วนประกอบ</p>
+                    <p id="componentTypes" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+                <div class="bg-purple-100 rounded-full p-3">
+                    <i class="fas fa-tags text-purple-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-4">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">ค้นหาและกรองข้อมูล</h3>
+                <p class="text-sm text-gray-600">ค้นหา BOM หรือกรองตามประเภทสินค้า</p>
+            </div>
+            
+            <div class="flex flex-wrap gap-4">
+                <!-- Search -->
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        id="bomSearch" 
+                        placeholder="ค้นหา SKU หรือชื่อสินค้า..." 
+                        class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        onkeyup="filterBOMs()"
+                    >
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+
+                <!-- Product Type Filter -->
+                <select id="bomProductTypeFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="filterBOMs()">
+                    <option value="">ประเภทสินค้าทั้งหมด</option>
+                    <option value="สินค้าสำเร็จรูป">สินค้าสำเร็จรูป</option>
+                    <option value="สินค้า Premium">สินค้า Premium</option>
+                </select>
+
+                <!-- Status Filter -->
+                <select id="bomStatusFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="filterBOMs()">
+                    <option value="">สถานะทั้งหมด</option>
+                    <option value="true">ใช้งาน</option>
+                    <option value="false">ไม่ใช้งาน</option>
+                </select>
+
+                <button onclick="refreshBOMs()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-sync-alt mr-1"></i>รีเฟรช
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOM List -->
+    <div class="bg-white rounded-xl shadow-lg">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-900">รายการ BOM</h2>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600">
+                        แสดง <span id="bomCount">0</span> รายการ
+                    </span>
+                    <button onclick="exportBOMs()" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        <i class="fas fa-download mr-1"></i>ส่งออก Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU สินค้าสำเร็จรูป</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อสินค้า</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">เวอร์ชัน</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">จำนวนส่วนประกอบ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">วัตถุดิบหลัก</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">อัพเดทล่าสุด</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">การจัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="bomTableBody" class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-4"></i>
+                            <p>กำลังโหลดข้อมูล BOM...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- BOM Detail Modal -->
+<div id="bomDetailModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center">
+    <div class="bg-white rounded-xl shadow-2xl max-w-6xl w-full mx-4 max-h-screen overflow-y-auto">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h3 id="bomDetailTitle" class="text-xl font-bold text-gray-900">รายละเอียด BOM</h3>
+                <button onclick="closeBOMDetailModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="bomDetailContent" class="p-6">
+            <!-- Content will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- New/Edit BOM Modal -->
+<div id="bomFormModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center">
+    <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-screen overflow-y-auto">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h3 id="bomFormTitle" class="text-xl font-bold text-gray-900">สร้าง BOM ใหม่</h3>
+                <button onclick="closeBOMFormModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <form id="bomForm" class="p-6">
+            <div class="space-y-6">
+                <!-- Finished Product -->
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900 border-b pb-2 mb-4">สินค้าสำเร็จรูป</h4>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ค้นหาสินค้าสำเร็จรูป *</label>
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                id="finishedProductSearch" 
+                                placeholder="พิมพ์ SKU หรือชื่อสินค้าสำเร็จรูป..." 
+                                class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                autocomplete="off"
+                            >
+                            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                        <div id="finishedProductResults" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto">
+                            <!-- Search results will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Selected Finished Product -->
+                    <div id="selectedFinishedProductInfo" class="hidden mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-semibold text-blue-900" id="selectedFinishedProductName">-</h4>
+                                <p class="text-sm text-blue-700" id="selectedFinishedProductSKU">-</p>
+                            </div>
+                            <button type="button" onclick="clearSelectedFinishedProduct()" class="text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Components -->
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="text-lg font-semibold text-gray-900 border-b pb-2">ส่วนประกอบ</h4>
+                        <button type="button" onclick="addComponent()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm">
+                            <i class="fas fa-plus mr-1"></i>เพิ่มส่วนประกอบ
+                        </button>
+                    </div>
+
+                    <div id="componentsContainer" class="space-y-4">
+                        <!-- Components will be added here -->
+                        <div class="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                            <i class="fas fa-puzzle-piece text-2xl mb-2"></i>
+                            <p>คลิก "เพิ่มส่วนประกอบ" เพื่อเริ่มต้น</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BOM Version and Status -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">เวอร์ชัน BOM</label>
+                        <input 
+                            type="number" 
+                            id="bomVersion" 
+                            min="1" 
+                            value="1"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">สถานะ</label>
+                        <select 
+                            id="bomStatus" 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                            <option value="true">ใช้งาน</option>
+                            <option value="false">ไม่ใช้งาน</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="mt-8 flex justify-end space-x-4">
+                <button 
+                    type="button" 
+                    onclick="closeBOMFormModal()" 
+                    class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                    ยกเลิก
+                </button>
+                <button 
+                    type="submit" 
+                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                >
+                    <span id="bomFormSubmitText">บันทึก BOM</span>
+                    <i id="bomFormSpinner" class="fas fa-spinner fa-spin ml-2 hidden"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Component Template (Hidden) -->
+<div id="componentTemplate" class="hidden">
+    <div class="component-item bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <div class="flex justify-between items-start mb-4">
+            <h5 class="font-semibold text-gray-900">ส่วนประกอบ #<span class="component-number">1</span></h5>
+            <button type="button" onclick="removeComponent(this)" class="text-red-600 hover:text-red-800">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Component Search -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">ค้นหาส่วนประกอบ *</label>
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        class="component-search w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        placeholder="พิมพ์ SKU ส่วนประกอบ..." 
+                        autocomplete="off"
+                    >
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+                <div class="component-results absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-40 overflow-y-auto">
+                    <!-- Search results will be populated here -->
+                </div>
+            </div>
+
+            <!-- Component Type -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">ประเภทส่วนประกอบ *</label>
+                <select class="component-type w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" required>
+                    <option value="">เลือกประเภท</option>
+                    <option value="วัตถุดิบ">วัตถุดิบ</option>
+                    <option value="อาหาร">อาหาร</option>
+                    <option value="ถุง">ถุง</option>
+                    <option value="สติ๊กเกอร์_1">สติ๊กเกอร์ 1</option>
+                    <option value="สติ๊กเกอร์_2">สติ๊กเกอร์ 2</option>
+                    <option value="บรรจุภัณฑ์">บรรจุภัณฑ์</option>
+                </select>
+            </div>
+
+            <!-- Quantity -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">จำนวน *</label>
+                <input 
+                    type="number" 
+                    class="component-quantity w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    min="0.001" 
+                    step="0.001"
+                    placeholder="1.000"
+                    required
+                >
+            </div>
+
+            <!-- Unit -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">หน่วย</label>
+                <select class="component-unit w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    <option value="กก.">กิโลกรัม</option>
+                    <option value="ชิ้น">ชิ้น</option>
+                    <option value="ถุง">ถุง</option>
+                    <option value="แผ่น">แผ่น</option>
+                    <option value="ใบ">ใบ</option>
+                    <option value="ม้วน">ม้วน</option>
+                    <option value="กล่อง">กล่อง</option>
+                    <option value="ลิตร">ลิตร</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Selected Component Info -->
+        <div class="selected-component-info hidden mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="font-medium text-green-900 selected-component-name">-</p>
+                    <p class="text-sm text-green-700 selected-component-sku">-</p>
+                </div>
+                <button type="button" onclick="clearSelectedComponent(this)" class="text-green-600 hover:text-green-800">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Hidden fields for selected component -->
+        <input type="hidden" class="component-sku">
+    </div>
+</div>
+
+<style>
+.component-item {
+    transition: all 0.2s ease;
+}
+
+.component-item:hover {
+    border-color: #D1D5DB;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+</style>
+
+<script id="bom-script">
+let allBOMs = [];
+let filteredBOMs = [];
+let selectedFinishedProduct = null;
+let componentCounter = 0;
+
+function loadBOM() {
+    document.getElementById('mainContent').innerHTML = `<?= include('bom'); ?>`;
+    
+    // Initialize BOM page
+    initializeBOMPage();
+}
+
+function initializeBOMPage() {
+    // Setup event listeners
+    setupBOMEventListeners();
+    
+    // Load initial data
+    loadBOMStats();
+    loadAllBOMs();
+}
+
+function setupBOMEventListeners() {
+    // Finished product search
+    const finishedProductSearch = document.getElementById('finishedProductSearch');
+    if (finishedProductSearch) {
+        let searchTimeout;
+        finishedProductSearch.addEventListener('input', function(event) {
+            const searchTerm = event.target.value.trim();
+            
+            if (searchTerm.length < 2) {
+                hideFinishedProductResults();
+                return;
+            }
+
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchFinishedProducts(searchTerm);
+            }, 300);
+        });
+
+        finishedProductSearch.addEventListener('blur', function() {
+            setTimeout(() => hideFinishedProductResults(), 200);
+        });
+    }
+
+    // Form submission
+    const bomForm = document.getElementById('bomForm');
+    if (bomForm) {
+        bomForm.addEventListener('submit', handleBOMSubmit);
+    }
+}
+
+function loadBOMStats() {
+    // For now, show static data
+    document.getElementById('totalBOMs').textContent = '8';
+    document.getElementById('activeBOMs').textContent = '6';
+    document.getElementById('totalComponents').textContent = '24';
+    document.getElementById('componentTypes').textContent = '6';
+}
+
+function loadAllBOMs() {
+    googleScriptCall('getAllBOMs')
+        .then(response => {
+            if (response.success) {
+                allBOMs = response.data || [];
+                filteredBOMs = [...allBOMs];
+                displayBOMs();
+            } else {
+                console.error('Failed to load BOMs:', response.message);
+                displayBOMsError();
+            }
+        })
+        .catch(error => {
+            console.error('BOMs loading error:', error);
+            displayBOMsError();
+        });
+}
+
+function displayBOMs() {
+    const tbody = document.getElementById('bomTableBody');
+    const bomCount = document.getElementById('bomCount');
+    
+    if (!filteredBOMs || filteredBOMs.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                    <i class="fas fa-search text-4xl mb-4"></i>
+                    <p class="text-lg">ไม่พบข้อมูล BOM</p>
+                    <button onclick="openNewBOMModal()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        สร้าง BOM ใหม่
+                    </button>
+                </td>
+            </tr>
+        `;
+        if (bomCount) bomCount.textContent = '0';
+        return;
+    }
+    
+    const rows = filteredBOMs.map(bom => {
+        const product = bom.products || {};
+        const components = bom.bom_components || [];
+        const mainComponent = components.find(c => c.component_type === 'วัตถุดิบ') || components[0];
+        const lastUpdated = bom.updated_at ? new Date(bom.updated_at).toLocaleDateString('th-TH') : 'N/A';
+        
+        return `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${bom.finished_product_sku}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="text-sm text-gray-900 font-medium">${product.product_name || 'N/A'}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                        v${bom.bom_version || 1}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${components.length} รายการ
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${mainComponent ? mainComponent.component_sku : 'N/A'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${bom.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                        ${bom.is_active ? 'ใช้งาน' : 'ไม่ใช้งาน'}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${lastUpdated}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button 
+                        onclick="viewBOMDetail('${bom.finished_product_sku}')" 
+                        class="text-blue-600 hover:text-blue-900 transition-colors"
+                        title="ดูรายละเอียด"
+                    >
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button 
+                        onclick="editBOM('${bom.finished_product_sku}')" 
+                        class="text-green-600 hover:text-green-900 transition-colors"
+                        title="แก้ไข"
+                    >
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button 
+                        onclick="duplicateBOM('${bom.finished_product_sku}')" 
+                        class="text-orange-600 hover:text-orange-900 transition-colors"
+                        title="ทำสำเนา"
+                    >
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button 
+                        onclick="deleteBOM('${bom.finished_product_sku}')" 
+                        class="text-red-600 hover:text-red-900 transition-colors"
+                        title="ลบ"
+                    >
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    tbody.innerHTML = rows;
+    if (bomCount) bomCount.textContent = filteredBOMs.length.toLocaleString();
+}
+
+function displayBOMsError() {
+    const tbody = document.getElementById('bomTableBody');
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="8" class="px-6 py-12 text-center text-red-500">
+                <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                <p class="text-lg">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+                <button onclick="loadAllBOMs()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    ลองใหม่
+                </button>
+            </td>
+        </tr>
+    `;
+}
+
+function filterBOMs() {
+    const searchTerm = document.getElementById('bomSearch').value.toLowerCase();
+    const productTypeFilter = document.getElementById('bomProductTypeFilter').value;
+    const statusFilter = document.getElementById('bomStatusFilter').value;
+    
+    filteredBOMs = allBOMs.filter(bom => {
+        const matchesSearch = !searchTerm || 
+            bom.finished_product_sku.toLowerCase().includes(searchTerm) ||
+            (bom.products && bom.products.product_name && bom.products.product_name.toLowerCase().includes(searchTerm));
+        
+        const matchesType = !productTypeFilter || 
+            (bom.products && bom.products.product_type === productTypeFilter);
+        
+        const matchesStatus = !statusFilter || 
+            bom.is_active.toString() === statusFilter;
+        
+        return matchesSearch && matchesType && matchesStatus;
+    });
+    
+    displayBOMs();
+}
+
+function refreshBOMs() {
+    loadAllBOMs();
+    showMessage('รีเฟรชข้อมูล BOM เรียบร้อยแล้ว', 'success');
+}
+
+function openNewBOMModal() {
+    document.getElementById('bomFormTitle').textContent = 'สร้าง BOM ใหม่';
+    document.getElementById('bomForm').reset();
+    clearSelectedFinishedProduct();
+    clearAllComponents();
+    document.getElementById('bomFormModal').classList.remove('hidden');
+}
+
+function closeBOMFormModal() {
+    document.getElementById('bomFormModal').classList.add('hidden');
+}
+
+function searchFinishedProducts(searchTerm) {
+    googleScriptCall('searchProducts', searchTerm)
+        .then(response => {
+            if (response.success) {
+                // Filter only finished products
+                const finishedProducts = (response.data || []).filter(product => 
+                    product.product_type === 'สินค้าสำเร็จรูป' || product.product_type === 'สินค้า Premium'
+                );
+                displayFinishedProductResults(finishedProducts);
+            } else {
+                console.error('Product search failed:', response.message);
+                hideFinishedProductResults();
+            }
+        })
+        .catch(error => {
+            console.error('Product search error:', error);
+            hideFinishedProductResults();
+        });
+}
+
+function displayFinishedProductResults(products) {
+    const resultsContainer = document.getElementById('finishedProductResults');
+    
+    if (!products || products.length === 0) {
+        hideFinishedProductResults();
+        return;
+    }
+
+    const resultsHTML = products.map(product => `
+        <div class="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0" 
+             onclick="selectFinishedProduct('${product.sku}', '${product.product_name}')">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="font-medium text-gray-900">${product.sku}</p>
+                    <p class="text-sm text-gray-600">${product.product_name}</p>
+                    <p class="text-xs text-gray-500">${product.product_type}</p>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    resultsContainer.innerHTML = resultsHTML;
+    resultsContainer.classList.remove('hidden');
+}
+
+function hideFinishedProductResults() {
+    const resultsContainer = document.getElementById('finishedProductResults');
+    if (resultsContainer) {
+        resultsContainer.classList.add('hidden');
+    }
+}
+
+function selectFinishedProduct(sku, productName) {
+    selectedFinishedProduct = { sku, productName };
+    
+    document.getElementById('finishedProductSearch').value = sku;
+    document.getElementById('selectedFinishedProductSKU').textContent = sku;
+    document.getElementById('selectedFinishedProductName').textContent = productName;
+    
+    document.getElementById('selectedFinishedProductInfo').classList.remove('hidden');
+    hideFinishedProductResults();
+}
+
+function clearSelectedFinishedProduct() {
+    selectedFinishedProduct = null;
+    document.getElementById('finishedProductSearch').value = '';
+    document.getElementById('selectedFinishedProductInfo').classList.add('hidden');
+}
+
+function addComponent() {
+    componentCounter++;
+    const template = document.getElementById('componentTemplate');
+    const newComponent = template.cloneNode(true);
+    
+    newComponent.id = '';
+    newComponent.classList.remove('hidden');
+    newComponent.querySelector('.component-number').textContent = componentCounter;
+    
+    // Setup event listeners for the new component
+    setupComponentEventListeners(newComponent);
+    
+    // Add to container
+    const container = document.getElementById('componentsContainer');
+    const placeholder = container.querySelector('.text-center');
+    if (placeholder) {
+        placeholder.remove();
+    }
+    container.appendChild(newComponent);
+}
+
+function removeComponent(button) {
+    const componentItem = button.closest('.component-item');
+    componentItem.remove();
+    
+    // Show placeholder if no components left
+    const container = document.getElementById('componentsContainer');
+    if (container.children.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                <i class="fas fa-puzzle-piece text-2xl mb-2"></i>
+                <p>คลิก "เพิ่มส่วนประกอบ" เพื่อเริ่มต้น</p>
+            </div>
+        `;
+    }
+}
+
+function clearAllComponents() {
+    const container = document.getElementById('componentsContainer');
+    container.innerHTML = `
+        <div class="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <i class="fas fa-puzzle-piece text-2xl mb-2"></i>
+            <p>คลิก "เพิ่มส่วนประกอบ" เพื่อเริ่มต้น</p>
+        </div>
+    `;
+    componentCounter = 0;
+}
+
+function setupComponentEventListeners(componentElement) {
+    const searchInput = componentElement.querySelector('.component-search');
+    const resultsContainer = componentElement.querySelector('.component-results');
+    
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', function(event) {
+            const searchTerm = event.target.value.trim();
+            
+            if (searchTerm.length < 2) {
+                resultsContainer.classList.add('hidden');
+                return;
+            }
+
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchComponents(searchTerm, resultsContainer, componentElement);
+            }, 300);
+        });
+
+        searchInput.addEventListener('blur', function() {
+            setTimeout(() => {
+                resultsContainer.classList.add('hidden');
+            }, 200);
+        });
+    }
+}
+
+function searchComponents(searchTerm, resultsContainer, componentElement) {
+    googleScriptCall('searchProducts', searchTerm)
+        .then(response => {
+            if (response.success) {
+                // Filter only components (not finished products)
+                const components = (response.data || []).filter(product => 
+                    product.product_type !== 'สินค้าสำเร็จรูป' && product.product_type !== 'สินค้า Premium'
+                );
+                displayComponentResults(components, resultsContainer, componentElement);
+            } else {
+                console.error('Component search failed:', response.message);
+                resultsContainer.classList.add('hidden');
+            }
+        })
+        .catch(error => {
+            console.error('Component search error:', error);
+            resultsContainer.classList.add('hidden');
+        });
+}
+
+function displayComponentResults(components, resultsContainer, componentElement) {
+    if (!components || components.length === 0) {
+        resultsContainer.classList.add('hidden');
+        return;
+    }
+
+    const resultsHTML = components.map(component => `
+        <div class="px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0" 
+             onclick="selectComponent('${component.sku}', '${component.product_name}', '${component.unit}', this)">
+            <p class="font-medium text-gray-900 text-sm">${component.sku}</p>
+            <p class="text-xs text-gray-600">${component.product_name}</p>
+            <p class="text-xs text-gray-500">${component.product_type} - ${component.unit}</p>
+        </div>
+    `).join('');
+
+    resultsContainer.innerHTML = resultsHTML;
+    resultsContainer.classList.remove('hidden');
+}
+
+function selectComponent(sku, productName, unit, element) {
+    const componentElement = element.closest('.component-item');
+    const searchInput = componentElement.querySelector('.component-search');
+    const skuInput = componentElement.querySelector('.component-sku');
+    const unitSelect = componentElement.querySelector('.component-unit');
+    const selectedInfo = componentElement.querySelector('.selected-component-info');
+    const selectedName = componentElement.querySelector('.selected-component-name');
+    const selectedSKU = componentElement.querySelector('.selected-component-sku');
+    const resultsContainer = componentElement.querySelector('.component-results');
+    
+    // Update values
+    searchInput.value = sku;
+    skuInput.value = sku;
+    if (unitSelect) {
+        unitSelect.value = unit || 'ชิ้น';
+    }
+    
+    // Update display
+    selectedName.textContent = productName;
+    selectedSKU.textContent = sku;
+    selectedInfo.classList.remove('hidden');
+    resultsContainer.classList.add('hidden');
+}
+
+function clearSelectedComponent(button) {
+    const componentElement = button.closest('.component-item');
+    const searchInput = componentElement.querySelector('.component-search');
+    const skuInput = componentElement.querySelector('.component-sku');
+    const selectedInfo = componentElement.querySelector('.selected-component-info');
+    
+    searchInput.value = '';
+    skuInput.value = '';
+    selectedInfo.classList.add('hidden');
+}
+
+function handleBOMSubmit(event) {
+    event.preventDefault();
+    
+    if (!selectedFinishedProduct) {
+        showMessage('กรุณาเลือกสินค้าสำเร็จรูป', 'error');
+        return;
+    }
+    
+    // Collect components data
+    const components = [];
+    const componentItems = document.querySelectorAll('.component-item');
+    
+    if (componentItems.length === 0) {
+        showMessage('กรุณาเพิ่มส่วนประกอบอย่างน้อย 1 รายการ', 'error');
+        return;
+    }
+    
+    for (const item of componentItems) {
+        const sku = item.querySelector('.component-sku').value;
+        const type = item.querySelector('.component-type').value;
+        const quantity = parseFloat(item.querySelector('.component-quantity').value);
+        const unit = item.querySelector('.component-unit').value;
+        
+        if (!sku || !type || !quantity) {
+            showMessage('กรุณากรอกข้อมูลส่วนประกอบให้ครบถ้วน', 'error');
+            return;
+        }
+        
+        components.push({ sku, type, quantity, unit });
+    }
+    
+    // Show loading state
+    setBOMFormLoading(true);
+    
+    // Prepare BOM data
+    const bomData = {
+        finished_product_sku: selectedFinishedProduct.sku,
+        bom_version: parseInt(document.getElementById('bomVersion').value) || 1,
+        is_active: document.getElementById('bomStatus').value === 'true',
+        components: components
+    };
+    
+    // Submit BOM
+    googleScriptCall('saveBOM', bomData)
+        .then(response => {
+            if (response.success) {
+                showMessage('บันทึก BOM เรียบร้อยแล้ว', 'success');
+                closeBOMFormModal();
+                loadAllBOMs();
+            } else {
+                showMessage('เกิดข้อผิดพลาด: ' + response.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('BOM submission error:', error);
+            showMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+        })
+        .finally(() => {
+            setBOMFormLoading(false);
+        });
+}
+
+function setBOMFormLoading(isLoading) {
+    const button = document.querySelector('#bomForm button[type="submit"]');
+    const text = document.getElementById('bomFormSubmitText');
+    const spinner = document.getElementById('bomFormSpinner');
+    
+    if (button) button.disabled = isLoading;
+    if (text) text.textContent = isLoading ? 'กำลังบันทึก...' : 'บันทึก BOM';
+    if (spinner) {
+        if (isLoading) {
+            spinner.classList.remove('hidden');
+        } else {
+            spinner.classList.add('hidden');
+        }
+    }
+}
+
+function viewBOMDetail(sku) {
+    const bom = allBOMs.find(b => b.finished_product_sku === sku);
+    if (!bom) {
+        showMessage('ไม่พบข้อมูล BOM ที่ต้องการดู', 'error');
+        return;
+    }
+    
+    const detailContent = document.getElementById('bomDetailContent');
+    const components = bom.bom_components || [];
+    
+    const detailHTML = `
+        <div class="space-y-6">
+            <!-- Product Information -->
+            <div class="bg-blue-50 rounded-lg p-6">
+                <h4 class="text-lg font-semibold text-blue-900 mb-4">สินค้าสำเร็จรูป</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm text-blue-600">SKU:</p>
+                        <p class="font-medium text-blue-900">${bom.finished_product_sku}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-blue-600">ชื่อสินค้า:</p>
+                        <p class="font-medium text-blue-900">${bom.products?.product_name || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-blue-600">เวอร์ชัน BOM:</p>
+                        <p class="font-medium text-blue-900">v${bom.bom_version}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-blue-600">สถานะ:</p>
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${bom.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${bom.is_active ? 'ใช้งาน' : 'ไม่ใช้งาน'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Components -->
+            <div>
+                <h4 class="text-lg font-semibold text-gray-900 mb-4">ส่วนประกอบ (${components.length} รายการ)</h4>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อส่วนประกอบ</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ประเภท</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">จำนวน</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">หน่วย</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${components.map(component => `
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        ${component.component_sku}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-900">
+                                        ${component.products?.product_name || 'N/A'}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                            ${component.component_type}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        ${(component.quantity || 0).toLocaleString()}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        ${component.unit || 'ชิ้น'}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('bomDetailTitle').textContent = `BOM - ${bom.finished_product_sku}`;
+    detailContent.innerHTML = detailHTML;
+    document.getElementById('bomDetailModal').classList.remove('hidden');
+}
+
+function closeBOMDetailModal() {
+    document.getElementById('bomDetailModal').classList.add('hidden');
+}
+
+function editBOM(sku) {
+    showMessage(`แก้ไข BOM ${sku} - ฟังก์ชันกำลังพัฒนา`, 'info');
+}
+
+function duplicateBOM(sku) {
+    showMessage(`ทำสำเนา BOM ${sku} - ฟังก์ชันกำลังพัฒนา`, 'info');
+}
+
+function deleteBOM(sku) {
+    showConfirmModal(
+        `คุณแน่ใจหรือไม่ที่จะลบ BOM สำหรับ ${sku}?\n\nการดำเนินการนี้ไม่สามารถย้อนกลับได้`,
+        function() {
+            showMessage('ฟังก์ชันลบ BOM ยังไม่ได้ implement', 'error');
+        }
+    );
+}
+
+function exportBOMs() {
+    showMessage('กำลังเตรียมไฟล์ส่งออก...', 'success');
+    setTimeout(() => {
+        showMessage('ฟังก์ชันส่งออก BOM ยังไม่ได้ implement', 'error');
+    }, 1000);
+}
+
+function importBOMFromExcel() {
+    showMessage('ฟังก์ชันนำเข้า BOM จาก Excel กำลังพัฒนา', 'info');
+}
+</script>
