@@ -1,0 +1,303 @@
+<script>
+// Dashboard Script Functions
+async function loadDashboard() {
+    try {
+        const content = `
+            <div class="space-y-6">
+                <!-- Header -->
+                <div class="flex justify-between items-center">
+                    <h1 class="text-3xl font-bold text-gray-800">แดชบอร์ด</h1>
+                    <button onclick="refreshDashboard()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>รีเฟรช
+                    </button>
+                </div>
+
+                <!-- Stats Cards -->
+                <div id="statsCards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Loading placeholders -->
+                    ${Array(4).fill(0).map(() => `
+                        <div class="bg-white p-6 rounded-lg shadow-md animate-pulse">
+                            <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                            <div class="h-8 bg-gray-200 rounded w-1/2"></div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Recent Transactions -->
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">ธุรกรรมล่าสุด</h3>
+                        <div id="recentTransactions">
+                            <div class="text-center py-8">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                                <p class="text-gray-500 mt-2">กำลังโหลด...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Low Stock Alert -->
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">สินค้าสต๊อกต่ำ</h3>
+                        <div id="lowStockItems">
+                            <div class="text-center py-8">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
+                                <p class="text-gray-500 mt-2">กำลังโหลด...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Timeline -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">กิจกรรมล่าสุด</h3>
+                    <div id="activityTimeline">
+                        <div class="text-center py-8">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
+                            <p class="text-gray-500 mt-2">กำลังโหลด...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('mainContent').innerHTML = content;
+        await loadDashboardData();
+        
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+        showMessage('เกิดข้อผิดพลาดในการโหลดแดชบอร์ด', 'error');
+    }
+}
+
+async function loadDashboardData() {
+    try {
+        // Load dashboard statistics
+        const stats = await googleScriptCall('getDashboardStats');
+        
+        if (stats.success) {
+            renderStatsCards(stats.data);
+            renderLowStockItems(stats.data.low_stock_items);
+        }
+        
+        // Load recent transactions
+        const transactions = await googleScriptCall('getTransactions', { limit: 10 });
+        if (transactions.success) {
+            renderRecentTransactions(transactions.data);
+        }
+        
+        // Load activity timeline
+        await loadActivityTimeline();
+        
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        showMessage('เกิดข้อผิดพลาดในการโหลดข้อมูล', 'error');
+    }
+}
+
+function renderStatsCards(data) {
+    const cards = [
+        {
+            title: 'จำนวนสินค้าทั้งหมด',
+            value: data.total_products,
+            icon: 'fas fa-boxes',
+            color: 'blue',
+            change: null
+        },
+        {
+            title: 'ธุรกรรมวันนี้',
+            value: data.transactions_today,
+            icon: 'fas fa-exchange-alt',
+            color: 'green',
+            change: null
+        },
+        {
+            title: 'ที่เก็บที่ใช้งาน',
+            value: data.occupied_locations,
+            icon: 'fas fa-warehouse',
+            color: 'orange',
+            change: null
+        },
+        {
+            title: 'สินค้าสต๊อกต่ำ',
+            value: data.low_stock_products,
+            icon: 'fas fa-exclamation-triangle',
+            color: 'red',
+            change: null
+        }
+    ];
+
+    const cardsHtml = cards.map(card => `
+        <div class="bg-white p-6 rounded-lg shadow-md card-hover transition-all duration-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">${card.title}</p>
+                    <p class="text-3xl font-bold text-${card.color}-600">${card.value.toLocaleString()}</p>
+                </div>
+                <div class="p-3 bg-${card.color}-100 rounded-full">
+                    <i class="${card.icon} text-${card.color}-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    document.getElementById('statsCards').innerHTML = cardsHtml;
+}
+
+function renderRecentTransactions(transactions) {
+    if (!transactions || transactions.length === 0) {
+        document.getElementById('recentTransactions').innerHTML = `
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-inbox text-4xl mb-2"></i>
+                <p>ไม่มีธุรกรรมล่าสุด</p>
+            </div>
+        `;
+        return;
+    }
+
+    const transactionsHtml = transactions.slice(0, 5).map(transaction => `
+        <div class="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-box text-blue-600 text-sm"></i>
+                </div>
+                <div>
+                    <p class="font-medium text-gray-800">${transaction.products?.sku || 'N/A'}</p>
+                    <p class="text-sm text-gray-500">${transaction.transaction_types?.main_type || 'N/A'} - ${transaction.transaction_types?.sub_type || 'N/A'}</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="font-medium text-gray-800">${transaction.packs || 0} แพ็ค</p>
+                <p class="text-sm text-gray-500">${formatDateTime(transaction.created_at)}</p>
+            </div>
+        </div>
+    `).join('');
+
+    document.getElementById('recentTransactions').innerHTML = transactionsHtml;
+}
+
+function renderLowStockItems(items) {
+    if (!items || items.length === 0) {
+        document.getElementById('lowStockItems').innerHTML = `
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-check-circle text-4xl mb-2 text-green-500"></i>
+                <p>สต๊อกสินค้าอยู่ในระดับปกติ</p>
+            </div>
+        `;
+        return;
+    }
+
+    const itemsHtml = items.slice(0, 5).map(item => `
+        <div class="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-exclamation-triangle text-red-600 text-sm"></i>
+                </div>
+                <div>
+                    <p class="font-medium text-gray-800">${item.sku}</p>
+                    <p class="text-sm text-gray-500">${item.product_name || 'N/A'}</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="font-medium text-red-600">${item.total_pieces_normal || 0} ชิ้น</p>
+                <p class="text-sm text-gray-500">เหลือ</p>
+            </div>
+        </div>
+    `).join('');
+
+    document.getElementById('lowStockItems').innerHTML = itemsHtml;
+}
+
+async function loadActivityTimeline() {
+    try {
+        // Mock activity data - in real implementation, this would come from audit logs
+        const activities = [
+            {
+                type: 'receive',
+                description: 'รับสินค้า SKU: ABC001 จำนวน 50 แพ็ค',
+                user: 'สมชาย ใจดี',
+                time: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
+                icon: 'fas fa-truck-loading',
+                color: 'green'
+            },
+            {
+                type: 'picking',
+                description: 'เบิกสินค้า SKU: XYZ002 จำนวน 25 แพ็ค',
+                user: 'สมหญิง รักงาน',
+                time: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
+                icon: 'fas fa-dolly',
+                color: 'blue'
+            },
+            {
+                type: 'adjustment',
+                description: 'ปรับสต๊อก SKU: DEF003 เหตุผล: สินค้าเสียหาย',
+                user: 'สมศักดิ์ รับผิดชอบ',
+                time: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+                icon: 'fas fa-edit',
+                color: 'orange'
+            }
+        ];
+
+        const timelineHtml = activities.map(activity => `
+            <div class="flex items-start space-x-4 pb-6 last:pb-0">
+                <div class="w-10 h-10 bg-${activity.color}-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i class="${activity.icon} text-${activity.color}-600 text-sm"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-800">${activity.description}</p>
+                    <p class="text-sm text-gray-500">โดย ${activity.user} • ${formatTimeAgo(activity.time)}</p>
+                </div>
+            </div>
+        `).join('');
+
+        document.getElementById('activityTimeline').innerHTML = timelineHtml;
+        
+    } catch (error) {
+        console.error('Error loading activity timeline:', error);
+        document.getElementById('activityTimeline').innerHTML = `
+            <div class="text-center py-8 text-gray-500">
+                <p>ไม่สามารถโหลดกิจกรรมได้</p>
+            </div>
+        `;
+    }
+}
+
+async function refreshDashboard() {
+    showLoading();
+    try {
+        await loadDashboardData();
+        showMessage('รีเฟรชข้อมูลเรียบร้อยแล้ว', 'success');
+    } catch (error) {
+        showMessage('เกิดข้อผิดพลาดในการรีเฟรชข้อมูล', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Utility functions for dashboard
+function formatDateTime(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function formatTimeAgo(date) {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) {
+        return 'เมื่อสักครู่';
+    } else if (diffInSeconds < 3600) {
+        return `${Math.floor(diffInSeconds / 60)} นาทีที่แล้ว`;
+    } else if (diffInSeconds < 86400) {
+        return `${Math.floor(diffInSeconds / 3600)} ชั่วโมงที่แล้ว`;
+    } else {
+        return `${Math.floor(diffInSeconds / 86400)} วันที่แล้ว`;
+    }
+}
+</script>
