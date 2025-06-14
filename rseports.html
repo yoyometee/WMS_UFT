@@ -1,0 +1,731 @@
+<!-- Reports Content -->
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">รายงาน</h1>
+            <p class="text-gray-600 mt-1">รายงานและสถิติการดำเนินงานคลังสินค้า</p>
+        </div>
+        <div class="flex space-x-4">
+            <button onclick="scheduleReport()" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center">
+                <i class="fas fa-clock mr-2"></i>ตั้งเวลารายงาน
+            </button>
+            <button onclick="exportAllReports()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center">
+                <i class="fas fa-download mr-2"></i>ส่งออกทั้งหมด
+            </button>
+        </div>
+    </div>
+
+    <!-- Report Categories -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Inventory Reports -->
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center mb-4">
+                <div class="bg-blue-100 rounded-full p-3 mr-4">
+                    <i class="fas fa-warehouse text-blue-600 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">รายงานสต๊อก</h3>
+                    <p class="text-sm text-gray-600">รายงานเกี่ยวกับสต๊อกสินค้า</p>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <button onclick="generateStockReport()" class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors">
+                    • รายงานสต๊อกปัจจุบัน
+                </button>
+                <button onclick="generatePickFaceReport()" class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors">
+                    • รายงาน Pick Face
+                </button>
+                <button onclick="generateLowStockReport()" class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors">
+                    • รายงานสต๊อกต่ำ
+                </button>
+                <button onclick="generateStockMovementReport()" class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors">
+                    • รายงานการเคลื่อนไหวสต๊อก
+                </button>
+            </div>
+        </div>
+
+        <!-- Transaction Reports -->
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center mb-4">
+                <div class="bg-green-100 rounded-full p-3 mr-4">
+                    <i class="fas fa-exchange-alt text-green-600 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">รายงานธุรกรรม</h3>
+                    <p class="text-sm text-gray-600">รายงานการเคลื่อนไหวสินค้า</p>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <button onclick="generateReceiveReport()" class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-green-50 rounded-lg transition-colors">
+                    • รายงานการรับสินค้า
+                </button>
+                <button onclick="generatePickingReport()" class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-green-50 rounded-lg transition-colors">
+                    • รายงานการเบิกสินค้า
+                </button>
+                <button onclick="generateMovementReport()" class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-green-50 rounded-lg transition-colors">
+                    • รายงานการย้ายสินค้า
+                </button>
+                <button onclick="generateAdjustmentReport()" class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-green-50 rounded-lg transition-colors">
+                    • รายงานการปรับสต๊อก
+                </button>
+            </div>
+        </div>
+
+        <!-- Performance Reports -->
+        <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
+            <div class="flex items-center mb-4">
+                <div class="bg-orange-100 rounded-full p-3 mr-4">
+                    <i class="fas fa-chart-bar text-orange-600 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">รายงานประสิทธิภาพ</h3>
+                    <p class="text-sm text-gray-600">รายงานการดำเนินงาน</p>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <button onclick="generateLocationUtilizationReport()" class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-orange-50 rounded-lg transition-colors">
+                    • รายงานการใช้พื้นที่
+                </button>
+                <button onclick="generateTurnoverReport()" class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-orange-50 rounded-lg transition-colors">
+                    • รายงานอัตราหมุนเวียน
+                </button>
+                <button onclick="generateEfficiencyReport()" class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-orange-50 rounded-lg transition-colors">
+                    • รายงานประสิทธิภาพ
+                </button>
+                <button onclick="generateDailyOperationReport()" class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-orange-50 rounded-lg transition-colors">
+                    • รายงานประจำวัน
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Generator -->
+    <div class="bg-white rounded-xl shadow-lg">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-900">สร้างรายงานกำหนดเอง</h2>
+            <p class="text-gray-600 text-sm mt-1">เลือกข้อมูลและช่วงเวลาที่ต้องการ</p>
+        </div>
+
+        <div class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Report Configuration -->
+                <div class="space-y-6">
+                    <h3 class="text-lg font-semibold text-gray-900 border-b pb-2">การตั้งค่ารายงาน</h3>
+                    
+                    <!-- Report Type -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ประเภทรายงาน *</label>
+                        <select id="reportType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">เลือกประเภทรายงาน</option>
+                            <option value="stock">รายงานสต๊อก</option>
+                            <option value="transactions">รายงานธุรกรรม</option>
+                            <option value="movements">รายงานการเคลื่อนไหว</option>
+                            <option value="locations">รายงานตำแหน่งเก็บ</option>
+                            <option value="performance">รายงานประสิทธิภาพ</option>
+                        </select>
+                    </div>
+
+                    <!-- Date Range -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">วันที่เริ่มต้น</label>
+                            <input type="date" id="reportStartDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">วันที่สิ้นสุด</label>
+                            <input type="date" id="reportEndDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">กรองข้อมูล</label>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">ประเภทสินค้า</label>
+                                <select id="reportProductType" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                    <option value="">ทั้งหมด</option>
+                                    <option value="สินค้าสำเร็จรูป">สินค้าสำเร็จรูป</option>
+                                    <option value="สินค้า Premium">สินค้า Premium</option>
+                                    <option value="วัตถุดิบ">วัตถุดิบ</option>
+                                    <option value="บรรจุภัณฑ์">บรรจุภัณฑ์</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">โซน</label>
+                                <select id="reportZone" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                    <option value="">ทั้งหมด</option>
+                                    <option value="Selective Rack">Selective Rack</option>
+                                    <option value="Pick Face">Pick Face</option>
+                                    <option value="Premium">Premium</option>
+                                    <option value="Receiving">Receiving</option>
+                                    <option value="Dispatch">Dispatch</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Output Format -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">รูปแบบไฟล์</label>
+                        <div class="flex space-x-4">
+                            <label class="flex items-center">
+                                <input type="radio" name="reportFormat" value="excel" checked class="mr-2">
+                                <span class="text-sm">Excel (.xlsx)</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="reportFormat" value="pdf" class="mr-2">
+                                <span class="text-sm">PDF</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="reportFormat" value="csv" class="mr-2">
+                                <span class="text-sm">CSV</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Preview -->
+                <div class="space-y-6">
+                    <h3 class="text-lg font-semibold text-gray-900 border-b pb-2">ตัวอย่างรายงาน</h3>
+                    
+                    <div id="reportPreview" class="bg-gray-50 rounded-lg p-6 min-h-64">
+                        <div class="text-center py-12 text-gray-500">
+                            <i class="fas fa-file-alt text-4xl mb-4"></i>
+                            <p>เลือกประเภทรายงานเพื่อดูตัวอย่าง</p>
+                        </div>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <button onclick="generateCustomReport()" class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center">
+                        <i class="fas fa-file-export mr-2"></i>
+                        <span id="generateReportText">สร้างรายงาน</span>
+                        <i id="generateReportSpinner" class="fas fa-spinner fa-spin ml-2 hidden"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Reports -->
+    <div class="bg-white rounded-xl shadow-lg">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-900">รายงานล่าสุด</h2>
+                <button onclick="loadRecentReports()" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    <i class="fas fa-sync-alt mr-1"></i>รีเฟรช
+                </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">รายงาน</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ประเภท</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ช่วงเวลา</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สร้างเมื่อ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ผู้สร้าง</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">การจัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="recentReportsTableBody" class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                            <i class="fas fa-spinner fa-spin text-xl mb-2"></i>
+                            <p>กำลังโหลดข้อมูล...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script id="reports-script">
+function loadReports() {
+    document.getElementById('mainContent').innerHTML = `<?= include('reports'); ?>`;
+    
+    // Initialize reports page
+    initializeReportsPage();
+}
+
+function initializeReportsPage() {
+    // Set default date range (last 30 days)
+    setDefaultDateRange();
+    
+    // Setup event listeners
+    setupReportsEventListeners();
+    
+    // Load recent reports
+    loadRecentReports();
+}
+
+function setDefaultDateRange() {
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+    
+    document.getElementById('reportStartDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+    document.getElementById('reportEndDate').value = today.toISOString().split('T')[0];
+}
+
+function setupReportsEventListeners() {
+    // Report type change
+    const reportType = document.getElementById('reportType');
+    if (reportType) {
+        reportType.addEventListener('change', updateReportPreview);
+    }
+}
+
+function updateReportPreview() {
+    const reportType = document.getElementById('reportType').value;
+    const previewContainer = document.getElementById('reportPreview');
+    
+    if (!reportType) {
+        previewContainer.innerHTML = `
+            <div class="text-center py-12 text-gray-500">
+                <i class="fas fa-file-alt text-4xl mb-4"></i>
+                <p>เลือกประเภทรายงานเพื่อดูตัวอย่าง</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Show preview based on report type
+    const previews = {
+        stock: `
+            <div class="space-y-4">
+                <h4 class="font-semibold text-gray-900">รายงานสต๊อกสินค้า</h4>
+                <div class="bg-white rounded border overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-3 py-2 text-left">SKU</th>
+                                <th class="px-3 py-2 text-left">ชื่อสินค้า</th>
+                                <th class="px-3 py-2 text-right">สต๊อกปกติ</th>
+                                <th class="px-3 py-2 text-right">สต๊อกเสีย</th>
+                                <th class="px-3 py-2 text-right">น้ำหนักรวม</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="px-3 py-1">B-BAL-C|CRB|012</td><td class="px-3 py-1">ข้าวกล้องหอมมะลิ...</td><td class="px-3 py-1 text-right">1,250</td><td class="px-3 py-1 text-right">0</td><td class="px-3 py-1 text-right">1,500.00</td></tr>
+                            <tr class="bg-gray-50"><td class="px-3 py-1">B-RIC-W|JAS|005</td><td class="px-3 py-1">ข้าวขาวหอมมะลิ...</td><td class="px-3 py-1 text-right">800</td><td class="px-3 py-1 text-right">5</td><td class="px-3 py-1 text-right">966.00</td></tr>
+                            <tr><td class="px-3 py-1 text-center" colspan="5">...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `,
+        transactions: `
+            <div class="space-y-4">
+                <h4 class="font-semibold text-gray-900">รายงานธุรกรรม</h4>
+                <div class="bg-white rounded border overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-3 py-2 text-left">วันที่</th>
+                                <th class="px-3 py-2 text-left">ประเภท</th>
+                                <th class="px-3 py-2 text-left">SKU</th>
+                                <th class="px-3 py-2 text-right">จำนวน</th>
+                                <th class="px-3 py-2 text-left">ผู้บันทึก</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="px-3 py-1">14/06/2025</td><td class="px-3 py-1">รับสินค้า</td><td class="px-3 py-1">B-BAL-C|CRB|012</td><td class="px-3 py-1 text-right">+100</td><td class="px-3 py-1">เมธี</td></tr>
+                            <tr class="bg-gray-50"><td class="px-3 py-1">14/06/2025</td><td class="px-3 py-1">เบิกสินค้า</td><td class="px-3 py-1">B-RIC-W|JAS|005</td><td class="px-3 py-1 text-right">-50</td><td class="px-3 py-1">สมชาย</td></tr>
+                            <tr><td class="px-3 py-1 text-center" colspan="5">...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `,
+        movements: `
+            <div class="space-y-4">
+                <h4 class="font-semibold text-gray-900">รายงานการเคลื่อนไหว</h4>
+                <div class="bg-white rounded border overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-3 py-2 text-left">วันที่</th>
+                                <th class="px-3 py-2 text-left">SKU</th>
+                                <th class="px-3 py-2 text-left">จาก</th>
+                                <th class="px-3 py-2 text-left">ไป</th>
+                                <th class="px-3 py-2 text-right">จำนวน</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="px-3 py-1">14/06/2025</td><td class="px-3 py-1">B-BAL-C|CRB|012</td><td class="px-3 py-1">A01-01-001</td><td class="px-3 py-1">PF-01</td><td class="px-3 py-1 text-right">50</td></tr>
+                            <tr class="bg-gray-50"><td class="px-3 py-1">13/06/2025</td><td class="px-3 py-1">B-RIC-W|JAS|005</td><td class="px-3 py-1">A01-02-003</td><td class="px-3 py-1">DISP</td><td class="px-3 py-1 text-right">25</td></tr>
+                            <tr><td class="px-3 py-1 text-center" colspan="5">...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `,
+        locations: `
+            <div class="space-y-4">
+                <h4 class="font-semibold text-gray-900">รายงานตำแหน่งเก็บ</h4>
+                <div class="bg-white rounded border overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-3 py-2 text-left">ตำแหน่ง</th>
+                                <th class="px-3 py-2 text-left">โซน</th>
+                                <th class="px-3 py-2 text-left">สถานะ</th>
+                                <th class="px-3 py-2 text-left">SKU</th>
+                                <th class="px-3 py-2 text-right">จำนวน</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="px-3 py-1">A01-01-001</td><td class="px-3 py-1">Selective Rack</td><td class="px-3 py-1">ไม่ว่าง</td><td class="px-3 py-1">B-BAL-C|CRB|012</td><td class="px-3 py-1 text-right">100</td></tr>
+                            <tr class="bg-gray-50"><td class="px-3 py-1">A01-01-002</td><td class="px-3 py-1">Selective Rack</td><td class="px-3 py-1">ว่าง</td><td class="px-3 py-1">-</td><td class="px-3 py-1 text-right">-</td></tr>
+                            <tr><td class="px-3 py-1 text-center" colspan="5">...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `,
+        performance: `
+            <div class="space-y-4">
+                <h4 class="font-semibold text-gray-900">รายงานประสิทธิภาพ</h4>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white rounded border p-3">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600">85%</div>
+                            <div class="text-sm text-gray-600">อัตราการใช้พื้นที่</div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded border p-3">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600">2.5</div>
+                            <div class="text-sm text-gray-600">อัตราหมุนเวียน/เดือน</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded border overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-3 py-2 text-left">วันที่</th>
+                                <th class="px-3 py-2 text-right">รับสินค้า</th>
+                                <th class="px-3 py-2 text-right">เบิกสินค้า</th>
+                                <th class="px-3 py-2 text-right">ย้ายสินค้า</th>
+                                <th class="px-3 py-2 text-right">ประสิทธิภาพ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="px-3 py-1">14/06/2025</td><td class="px-3 py-1 text-right">12</td><td class="px-3 py-1 text-right">8</td><td class="px-3 py-1 text-right">5</td><td class="px-3 py-1 text-right">95%</td></tr>
+                            <tr class="bg-gray-50"><td class="px-3 py-1">13/06/2025</td><td class="px-3 py-1 text-right">15</td><td class="px-3 py-1 text-right">10</td><td class="px-3 py-1 text-right">3</td><td class="px-3 py-1 text-right">88%</td></tr>
+                            <tr><td class="px-3 py-1 text-center" colspan="5">...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `
+    };
+    
+    previewContainer.innerHTML = previews[reportType] || `
+        <div class="text-center py-12 text-gray-500">
+            <i class="fas fa-file-alt text-4xl mb-4"></i>
+            <p>ตัวอย่างรายงานจะแสดงที่นี่</p>
+        </div>
+    `;
+}
+
+function generateCustomReport() {
+    const reportType = document.getElementById('reportType').value;
+    const startDate = document.getElementById('reportStartDate').value;
+    const endDate = document.getElementById('reportEndDate').value;
+    
+    if (!reportType) {
+        showMessage('กรุณาเลือกประเภทรายงาน', 'error');
+        return;
+    }
+    
+    if (!startDate || !endDate) {
+        showMessage('กรุณาเลือกช่วงวันที่', 'error');
+        return;
+    }
+    
+    // Show loading state
+    setGenerateReportLoading(true);
+    
+    // Generate report based on type
+    const reportParams = {
+        type: reportType,
+        startDate: startDate,
+        endDate: endDate,
+        productType: document.getElementById('reportProductType').value,
+        zone: document.getElementById('reportZone').value,
+        format: document.querySelector('input[name="reportFormat"]:checked').value
+    };
+    
+    // Call appropriate report generation function
+    let reportFunction;
+    switch (reportType) {
+        case 'stock':
+            reportFunction = 'getCurrentStockReport';
+            break;
+        case 'transactions':
+            reportFunction = 'getTransactions';
+            break;
+        case 'locations':
+            reportFunction = 'getLocationReport';
+            break;
+        default:
+            reportFunction = 'getCurrentStockReport';
+    }
+    
+    googleScriptCall(reportFunction, reportParams)
+        .then(response => {
+            if (response.success) {
+                showMessage('สร้างรายงานเรียบร้อยแล้ว', 'success');
+                // In production, this would trigger file download
+                processReportData(response.data, reportParams);
+            } else {
+                showMessage('เกิดข้อผิดพลาดในการสร้างรายงาน: ' + response.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Report generation error:', error);
+            showMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+        })
+        .finally(() => {
+            setGenerateReportLoading(false);
+        });
+}
+
+function setGenerateReportLoading(isLoading) {
+    const text = document.getElementById('generateReportText');
+    const spinner = document.getElementById('generateReportSpinner');
+    const button = document.querySelector('button[onclick="generateCustomReport()"]');
+    
+    if (button) button.disabled = isLoading;
+    if (text) text.textContent = isLoading ? 'กำลังสร้าง...' : 'สร้างรายงาน';
+    if (spinner) {
+        if (isLoading) {
+            spinner.classList.remove('hidden');
+        } else {
+            spinner.classList.add('hidden');
+        }
+    }
+}
+
+function processReportData(data, params) {
+    // In production, this would format and download the report
+    console.log('Report data:', data);
+    console.log('Report params:', params);
+    
+    // Simulate file download
+    showMessage(`รายงาน${params.type}(${params.format.toUpperCase()}) พร้อมดาวน์โหลด`, 'success');
+}
+
+function loadRecentReports() {
+    // Load recent reports (placeholder data)
+    const recentReports = [
+        {
+            name: 'รายงานสต๊อกประจำวัน',
+            type: 'สต๊อก',
+            period: '14/06/2025',
+            createdAt: '14/06/2025 09:30',
+            createdBy: 'เมธี เจริญสุข',
+            status: 'เสร็จสิ้น'
+        },
+        {
+            name: 'รายงานการเคลื่อนไหวสินค้า',
+            type: 'ธุรกรรม',
+            period: '01-14/06/2025',
+            createdAt: '14/06/2025 08:15',
+            createdBy: 'สมชาย ใจดี',
+            status: 'เสร็จสิ้น'
+        },
+        {
+            name: 'รายงานประสิทธิภาพประจำสัปดาห์',
+            type: 'ประสิทธิภาพ',
+            period: '08-14/06/2025',
+            createdAt: '14/06/2025 07:45',
+            createdBy: 'เมธี เจริญสุข',
+            status: 'กำลังประมวลผล'
+        }
+    ];
+    
+    displayRecentReports(recentReports);
+}
+
+function displayRecentReports(reports) {
+    const tbody = document.getElementById('recentReportsTableBody');
+    
+    if (!reports || reports.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                    <i class="fas fa-inbox text-xl mb-2"></i>
+                    <p>ไม่มีรายงานล่าสุด</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    const rows = reports.map(report => {
+        const statusColor = report.status === 'เสร็จสิ้น' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+        
+        return `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                    <div class="text-sm font-medium text-gray-900">${report.name}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                        ${report.type}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${report.period}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${report.createdAt}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${report.createdBy}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusColor}">
+                        ${report.status}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    ${report.status === 'เสร็จสิ้น' ? `
+                        <button onclick="downloadReport('${report.name}')" class="text-blue-600 hover:text-blue-900 transition-colors" title="ดาวน์โหลด">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button onclick="shareReport('${report.name}')" class="text-green-600 hover:text-green-900 transition-colors" title="แชร์">
+                            <i class="fas fa-share"></i>
+                        </button>
+                    ` : `
+                        <button class="text-gray-400 cursor-not-allowed" title="กำลังประมวลผล">
+                            <i class="fas fa-clock"></i>
+                        </button>
+                    `}
+                    <button onclick="deleteReport('${report.name}')" class="text-red-600 hover:text-red-900 transition-colors" title="ลบ">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    tbody.innerHTML = rows;
+}
+
+// Quick report generation functions
+function generateStockReport() {
+    showMessage('กำลังสร้างรายงานสต๊อกปัจจุบัน...', 'success');
+    googleScriptCall('getCurrentStockReport')
+        .then(response => {
+            if (response.success) {
+                showMessage('รายงานสต๊อกพร้อมแล้ว', 'success');
+            }
+        })
+        .catch(error => {
+            showMessage('เกิดข้อผิดพลาดในการสร้างรายงาน', 'error');
+        });
+}
+
+function generatePickFaceReport() {
+    showMessage('กำลังสร้างรายงาน Pick Face...', 'success');
+    googleScriptCall('getPickFaceReport')
+        .then(response => {
+            if (response.success) {
+                showMessage('รายงาน Pick Face พร้อมแล้ว', 'success');
+            }
+        })
+        .catch(error => {
+            showMessage('เกิดข้อผิดพลาดในการสร้างรายงาน', 'error');
+        });
+}
+
+function generateLowStockReport() {
+    showMessage('ฟังก์ชันรายงานสต๊อกต่ำกำลังพัฒนา', 'info');
+}
+
+function generateStockMovementReport() {
+    showMessage('ฟังก์ชันรายงานการเคลื่อนไหวสต๊อกกำลังพัฒนา', 'info');
+}
+
+function generateReceiveReport() {
+    showMessage('กำลังสร้างรายงานการรับสินค้า...', 'success');
+    googleScriptCall('getTransactions', { main_type: 'รับสินค้า', limit: 1000 })
+        .then(response => {
+            if (response.success) {
+                showMessage('รายงานการรับสินค้าพร้อมแล้ว', 'success');
+            }
+        })
+        .catch(error => {
+            showMessage('เกิดข้อผิดพลาดในการสร้างรายงาน', 'error');
+        });
+}
+
+function generatePickingReport() {
+    showMessage('กำลังสร้างรายงานการเบิกสินค้า...', 'success');
+    googleScriptCall('getTransactions', { main_type: 'จัดเตรียมสินค้า', limit: 1000 })
+        .then(response => {
+            if (response.success) {
+                showMessage('รายงานการเบิกสินค้าพร้อมแล้ว', 'success');
+            }
+        })
+        .catch(error => {
+            showMessage('เกิดข้อผิดพลาดในการสร้างรายงาน', 'error');
+        });
+}
+
+function generateMovementReport() {
+    showMessage('ฟังก์ชันรายงานการย้ายสินค้ากำลังพัฒนา', 'info');
+}
+
+function generateAdjustmentReport() {
+    showMessage('ฟังก์ชันรายงานการปรับสต๊อกกำลังพัฒนา', 'info');
+}
+
+function generateLocationUtilizationReport() {
+    showMessage('ฟังก์ชันรายงานการใช้พื้นที่กำลังพัฒนา', 'info');
+}
+
+function generateTurnoverReport() {
+    showMessage('ฟังก์ชันรายงานอัตราหมุนเวียนกำลังพัฒนา', 'info');
+}
+
+function generateEfficiencyReport() {
+    showMessage('ฟังก์ชันรายงานประสิทธิภาพกำลังพัฒนา', 'info');
+}
+
+function generateDailyOperationReport() {
+    showMessage('ฟังก์ชันรายงานประจำวันกำลังพัฒนา', 'info');
+}
+
+function downloadReport(reportName) {
+    showMessage(`ดาวน์โหลดรายงาน: ${reportName}`, 'success');
+}
+
+function shareReport(reportName) {
+    showMessage(`แชร์รายงาน: ${reportName}`, 'info');
+}
+
+function deleteReport(reportName) {
+    showConfirmModal(`คุณต้องการลบรายงาน "${reportName}" หรือไม่?`, function() {
+        showMessage(`ลบรายงาน: ${reportName} เรียบร้อยแล้ว`, 'success');
+        loadRecentReports();
+    });
+}
+
+function scheduleReport() {
+    showMessage('ฟังก์ชันตั้งเวลารายงานกำลังพัฒนา', 'info');
+}
+
+function exportAllReports() {
+    showMessage('ฟังก์ชันส่งออกรายงานทั้งหมดกำลังพัฒนา', 'info');
+}
+</script>
